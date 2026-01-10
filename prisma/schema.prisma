@@ -1,0 +1,295 @@
+// Prisma schema for drunk30.buzz
+// PostgreSQL via Supabase
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum EpisodeStatus {
+  IDEA
+  OUTLINE
+  SCRIPT
+  READY_TO_RECORD
+  RECORDED
+  PROCESSING
+  PROCESSED
+  PUBLISHED
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum JobType {
+  TRANSCODE
+  GENERATE_THUMBNAIL
+  EXTRACT_AUDIO
+  GENERATE_SHORTS
+  PUBLISH_YOUTUBE
+}
+
+enum AssetType {
+  RAW_VIDEO
+  PROCESSED_VIDEO
+  AUDIO
+  THUMBNAIL
+  SHORT_CLIP
+  TRANSCRIPT
+}
+
+// ─────────────────────────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  episodes        Episode[]
+  recoveryEntries RecoveryEntry[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────
+// EPISODE
+// ─────────────────────────────────────────────────────────────
+
+model Episode {
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  title         String
+  episodeNumber Int?          @map("episode_number")
+  description   String?
+  topic         String?
+  status        EpisodeStatus @default(IDEA)
+  isPublic      Boolean       @default(false) @map("is_public")
+  publishedAt   DateTime?     @map("published_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outline     EpisodeOutline?
+  script      EpisodeScript?
+  recordings  Recording[]
+  assets      Asset[]
+  jobs        Job[]
+  youtubePack YouTubePack?
+  shortClips  ShortClip[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([isPublic, publishedAt])
+  @@index([episodeNumber])
+  @@map("episodes")
+}
+
+// ─────────────────────────────────────────────────────────────
+// EPISODE OUTLINE
+// ─────────────────────────────────────────────────────────────
+
+model EpisodeOutline {
+  id        String   @id @default(uuid())
+  episodeId String   @unique @map("episode_id")
+  content   String   @db.Text
+  prompt    String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@map("episode_outlines")
+}
+
+// ─────────────────────────────────────────────────────────────
+// EPISODE SCRIPT
+// ─────────────────────────────────────────────────────────────
+
+model EpisodeScript {
+  id            String   @id @default(uuid())
+  episodeId     String   @unique @map("episode_id")
+  content       String   @db.Text
+  wordCount     Int      @default(0) @map("word_count")
+  estDurationMs Int      @default(0) @map("est_duration_ms")
+  prompt        String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@map("episode_scripts")
+}
+
+// ─────────────────────────────────────────────────────────────
+// RECORDING
+// ─────────────────────────────────────────────────────────────
+
+model Recording {
+  id          String   @id @default(uuid())
+  episodeId   String   @map("episode_id")
+  fileName    String   @map("file_name")
+  storagePath String   @map("storage_path")
+  mimeType    String   @map("mime_type")
+  sizeBytes   Int      @map("size_bytes")
+  durationMs  Int?     @map("duration_ms")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@index([episodeId])
+  @@map("recordings")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ASSET
+// ─────────────────────────────────────────────────────────────
+
+model Asset {
+  id          String    @id @default(uuid())
+  episodeId   String    @map("episode_id")
+  type        AssetType
+  fileName    String    @map("file_name")
+  storagePath String    @map("storage_path")
+  mimeType    String    @map("mime_type")
+  sizeBytes   Int       @map("size_bytes")
+  metadata    Json?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@index([episodeId])
+  @@index([type])
+  @@map("assets")
+}
+
+// ─────────────────────────────────────────────────────────────
+// JOB (DB-backed queue)
+// ─────────────────────────────────────────────────────────────
+
+model Job {
+  id          String    @id @default(uuid())
+  episodeId   String    @map("episode_id")
+  type        JobType
+  status      JobStatus @default(PENDING)
+  payload     Json?
+  result      Json?
+  errorMsg    String?   @map("error_msg") @db.Text
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3) @map("max_attempts")
+  runAfter    DateTime  @default(now()) @map("run_after")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@index([status, runAfter])
+  @@index([episodeId])
+  @@map("jobs")
+}
+
+// ─────────────────────────────────────────────────────────────
+// YOUTUBE PACK
+// ─────────────────────────────────────────────────────────────
+
+model YouTubePack {
+  id               String   @id @default(uuid())
+  episodeId        String   @unique @map("episode_id")
+  titleOptions     String[] @map("title_options")
+  description      String   @db.Text
+  hashtags         String[]
+  tags             String[]
+  chapters         Json?
+  pinnedComment    String?  @map("pinned_comment") @db.Text
+  thumbnailIdeas   String[] @map("thumbnail_ideas")
+  generationPrompt String?  @map("generation_prompt") @db.Text
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@map("youtube_packs")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SHORT CLIP (stub for phase 2)
+// ─────────────────────────────────────────────────────────────
+
+model ShortClip {
+  id          String   @id @default(uuid())
+  episodeId   String   @map("episode_id")
+  title       String?
+  startMs     Int      @map("start_ms")
+  endMs       Int      @map("end_ms")
+  storagePath String?  @map("storage_path")
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@index([episodeId])
+  @@map("short_clips")
+}
+
+// ─────────────────────────────────────────────────────────────
+// LEAD (Email CRM)
+// ─────────────────────────────────────────────────────────────
+
+model Lead {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  name            String?
+  source          String?
+  consentGiven    Boolean  @default(false) @map("consent_given")
+  consentText     String?  @map("consent_text") @db.Text
+  consentIp       String?  @map("consent_ip")
+  consentDatetime DateTime @default(now()) @map("consent_datetime")
+  tags            String[]
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([consentGiven])
+  @@map("leads")
+}
+
+// ─────────────────────────────────────────────────────────────
+// RECOVERY ENTRY (private log)
+// ─────────────────────────────────────────────────────────────
+
+model RecoveryEntry {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  date      DateTime @default(now())
+  mood      Int?
+  soberDay  Boolean  @default(true) @map("sober_day")
+  notes     String?  @db.Text
+  gratitude String?  @db.Text
+  triggers  String[]
+  wins      String[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@map("recovery_entries")
+}
