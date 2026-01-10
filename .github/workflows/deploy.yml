@@ -24,42 +24,21 @@ jobs:
       # - GCP_WIF_PROVIDER: projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/<POOL_ID>/providers/<PROVIDER_ID>
       # - GCP_SERVICE_ACCOUNT_EMAIL: <YOUR_SERVICE_ACCOUNT>@<PROJECT_ID>.iam.gserviceaccount.com
       - name: Authenticate to GCP (Workload Identity)
-<<<<<<< Updated upstream
-      if: secrets.GCP_WIF_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL != ''
-      uses: google-github-actions/auth@v1 
-            with:
-        if: ${{ secrets.GCP_WIF_PROVIDER && secrets.GCP_SERVICE_ACCOUNT_EMAIL }}        uses: google-github-actions/auth@v1
-=======
-        if: secrets.GCP_WIF_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL != ''
+        if: ${{ secrets.GCP_WIF_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL != '' }}
         uses: google-github-actions/auth@v1
->>>>>>> Stashed changes
         with:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
 
       # Fallback: prepare service account JSON key with proper newlines (if set)
       - name: Prepare GCP key (fallback)
-<<<<<<< Updated upstream
-      if: secrets.GCP_SA_KEY != ''
-      run: |          echo "${{ secrets.GCP_SA_KEY }}" | sed 's/\\n/\n/g' | tr -d '\r' > "${HOME}/gcloud-key.json"
-
-      - name: Authenticate with service account key (fallback)
-      if: secrets.GCP_SA_KEY != ''
-      run: |          gcloud auth activate-service-account --key-file="${HOME}/gcloud-key.json"
-        if: ${{ secrets.GCP_SA_KEY }}        run: |
-          echo "${{ secrets.GCP_SA_KEY }}" | sed 's/\\n/\n/g' | tr -d '\r' > "${HOME}/gcloud-key.json"
-
-      - name: Authenticate with service account key (fallback)
-        if: ${{ secrets.GCP_SA_KEY }}        run: |
-=======
-        if: secrets.GCP_SA_KEY_BASE64 != '' && secrets.GCP_WIF_PROVIDER == ''
+        if: ${{ secrets.GCP_SA_KEY_BASE64 != '' && secrets.GCP_WIF_PROVIDER == '' }}
         run: |
           echo "${{ secrets.GCP_SA_KEY_BASE64 }}" | base64 -d > "${HOME}/gcloud-key.json"
 
       - name: Authenticate with service account key (fallback)
-        if: secrets.GCP_SA_KEY_BASE64 != '' && secrets.GCP_WIF_PROVIDER == ''
+        if: ${{ secrets.GCP_SA_KEY_BASE64 != '' && secrets.GCP_WIF_PROVIDER == '' }}
         run: |
->>>>>>> Stashed changes
           gcloud auth activate-service-account --key-file="${HOME}/gcloud-key.json"
           gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
 
@@ -82,3 +61,9 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars DATABASE_URL=$DATABASE_URL,OPENAI_API_KEY=$OPENAI_API_KEY,NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+
+      - name: Print Cloud Run URL
+        run: |
+          gcloud run services describe drunk30-buzz-service \
+            --region us-central1 \
+            --format "value(status.url)"
