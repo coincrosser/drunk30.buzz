@@ -17,9 +17,8 @@ jobs:
       - name: Decode SA key
         id: decode-sa
         run: |
-          echo "credentials_json<<EOF" >> "$GITHUB_OUTPUT"
-          echo "${{ secrets.GCP_SA_KEY_BASE64 }}" | base64 -d >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          decoded=$(echo "$SA_KEY_B64" | base64 -d)
+          printf "credentials_json<<EOF\n%s\nEOF\n" "$decoded" >> "$GITHUB_OUTPUT"
 
       # Authenticate using auth@v2 with decoded JSON
       - name: Auth to GCP
