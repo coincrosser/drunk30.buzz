@@ -13,15 +13,15 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
-          project_id: ${{ secrets.GCP_PROJECT }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
           service_account_key: ${{ secrets.GCP_SA_KEY }}
 
       - name: Build Docker image
       env:
                 CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
         run: |
-          gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT }}/drunk30-buzz
+          gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/drunk30-buzz
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy drunk30-buzz-service --image gcr.io/${{ secrets.GCP_PROJECT }}/drunk30-buzz --region us-central1 --platform managed --allow-unauthenticated
+          gcloud run deploy drunk30-buzz-service --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/drunk30-buzz --region us-central1 --platform managed --allow-unauthenticated
