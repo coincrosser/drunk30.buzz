@@ -17,3 +17,6 @@ Deployment notes
 5) Prisma migrations: after deploying and setting DATABASE_URL to a production DB, run `npx prisma migrate deploy` against that DB.
 
 6) <!-- Deployment triggered: GCP credentials added -->
+
+
+<!-- Fresh GCP service account key deployed -->
