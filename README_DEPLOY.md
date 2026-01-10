@@ -1,22 +1,46 @@
-Deployment notes
+Deployment guide
 
-1) Cloud Run & Firebase Hosting flow
-   - Build Docker image, push to Container Registry, deploy to Cloud Run
-   - Use Firebase Hosting rewrites (firebase.json) to forward requests to Cloud Run
+1) Flow overview
+   - Build Docker image, push to Container Registry, deploy to Cloud Run (us-central1)
+   - Firebase Hosting rewrites (firebase.json) forward requests to Cloud Run
 
-2) Typical commands (local):
+2) GitHub Actions (preferred CI/CD)
+   - Workflow: .github/workflows/deploy.yml
+   - Required repo secrets (Actions → Secrets):
+     - GCP_PROJECT_ID: bamboo-almanac-483903-i3
+     - EITHER Workload Identity Federation (recommended):
+       - GCP_WIF_PROVIDER: projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/<POOL_ID>/providers/<PROVIDER_ID>
+       - GCP_SERVICE_ACCOUNT_EMAIL: <YOUR_SERVICE_ACCOUNT>@<PROJECT_ID>.iam.gserviceaccount.com
+     - OR fallback key (if WIF unavailable):
+       - GCP_SA_KEY_BASE64: base64 of service account JSON key
+
+3) Local deploy commands (manual):
    - gcloud auth login
    - gcloud config set project <PROJECT_ID>
+   - gcloud services enable cloudbuild.googleapis.com run.googleapis.com containerregistry.googleapis.com
    - gcloud builds submit --tag gcr.io/<PROJECT_ID>/drunk30-buzz:latest
    - gcloud run deploy drunk30-buzz-service --image gcr.io/<PROJECT_ID>/drunk30-buzz:latest --region us-central1 --platform managed --allow-unauthenticated --set-env-vars "DATABASE_URL=...,OPENAI_API_KEY=...,NEXT_PUBLIC_APP_URL=https://drunk30.buzz"
 
-3) GitHub Actions: set secrets `GCP_PROJECT` and `GCP_SA_KEY` (base64 JSON of service account key)
+4) Region & service alignment
+   - Use region: us-central1
+   - Service name: drunk30-buzz-service
+   - Remove any Cloud Build triggers deploying to other regions (e.g., europe-west1) to avoid conflicts
 
-4) Firebase Hosting: add `drunk30.buzz` domain and follow verification (add TXT record at Porkbun), then add DNS A/CNAME records as instructed.
+5) Firebase Hosting
+   - Add domain drunk30.buzz and verify via TXT record
+   - Follow Firebase DNS setup to point A/CNAME records
+   - Ensure rewrites in firebase.json target the Cloud Run URL
 
+<<<<<<< Updated upstream
 5) Prisma migrations: after deploying and setting DATABASE_URL to a production DB, run `npx prisma migrate deploy` against that DB.
 
 6) <!-- Deployment triggered: GCP credentials added -->
 
 
 <!-- Fresh GCP service account key deployed -->
+=======
+6) Database & Prisma
+   - Set DATABASE_URL to the production Supabase Postgres
+   - Apply migrations: npx prisma migrate deploy
+   - Regenerate client: npx prisma generate
+>>>>>>> Stashed changes

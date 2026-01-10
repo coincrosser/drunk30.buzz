@@ -17,23 +17,29 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
-          project_id: ${{ secrets.GCP_PROJECT }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
       # Preferred: authenticate via Workload Identity Federation (OIDC)
       # Requires these repo secrets to be set:
       # - GCP_WIF_PROVIDER: projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/<POOL_ID>/providers/<PROVIDER_ID>
-      # - GCP_SERVICE_ACCOUNT_EMAIL: drunk30-deployer@bamboo-almanac-483903-i3.iam.gserviceaccount.com
+      # - GCP_SERVICE_ACCOUNT_EMAIL: <YOUR_SERVICE_ACCOUNT>@<PROJECT_ID>.iam.gserviceaccount.com
       - name: Authenticate to GCP (Workload Identity)
+<<<<<<< Updated upstream
       if: secrets.GCP_WIF_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL != ''
       uses: google-github-actions/auth@v1 
             with:
         if: ${{ secrets.GCP_WIF_PROVIDER && secrets.GCP_SERVICE_ACCOUNT_EMAIL }}        uses: google-github-actions/auth@v1
+=======
+        if: secrets.GCP_WIF_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL != ''
+        uses: google-github-actions/auth@v1
+>>>>>>> Stashed changes
         with:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
 
       # Fallback: prepare service account JSON key with proper newlines (if set)
       - name: Prepare GCP key (fallback)
+<<<<<<< Updated upstream
       if: secrets.GCP_SA_KEY != ''
       run: |          echo "${{ secrets.GCP_SA_KEY }}" | sed 's/\\n/\n/g' | tr -d '\r' > "${HOME}/gcloud-key.json"
 
@@ -45,13 +51,34 @@ jobs:
 
       - name: Authenticate with service account key (fallback)
         if: ${{ secrets.GCP_SA_KEY }}        run: |
+=======
+        if: secrets.GCP_SA_KEY_BASE64 != '' && secrets.GCP_WIF_PROVIDER == ''
+        run: |
+          echo "${{ secrets.GCP_SA_KEY_BASE64 }}" | base64 -d > "${HOME}/gcloud-key.json"
+
+      - name: Authenticate with service account key (fallback)
+        if: secrets.GCP_SA_KEY_BASE64 != '' && secrets.GCP_WIF_PROVIDER == ''
+        run: |
+>>>>>>> Stashed changes
           gcloud auth activate-service-account --key-file="${HOME}/gcloud-key.json"
-          gcloud config set project ${{ secrets.GCP_PROJECT }}
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Build Docker image
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
         run: |
-          gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT }}/drunk30-buzz
+          gcloud builds submit --tag gcr.io/$PROJECT_ID/drunk30-buzz
 
       - name: Deploy to Cloud Run
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
         run: |
-          gcloud run deploy drunk30-buzz-service --image gcr.io/${{ secrets.GCP_PROJECT }}/drunk30-buzz --region us-central1 --platform managed --allow-unauthenticated
+          gcloud run deploy drunk30-buzz-service \
+            --image gcr.io/$PROJECT_ID/drunk30-buzz \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars DATABASE_URL=$DATABASE_URL,OPENAI_API_KEY=$OPENAI_API_KEY,NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
