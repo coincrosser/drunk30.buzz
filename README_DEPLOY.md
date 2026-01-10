@@ -15,3 +15,5 @@ Deployment notes
 4) Firebase Hosting: add `drunk30.buzz` domain and follow verification (add TXT record at Porkbun), then add DNS A/CNAME records as instructed.
 
 5) Prisma migrations: after deploying and setting DATABASE_URL to a production DB, run `npx prisma migrate deploy` against that DB.
+
+6) <!-- Deployment triggered: GCP credentials added -->
