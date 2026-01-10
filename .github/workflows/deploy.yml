@@ -1,4 +1,4 @@
-name: Deploy to Cloud Run
+﻿name: Deploy to Cloud Run
 
 on:
   push:
@@ -14,87 +14,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Write SA key file
-        id: write-sa
-        env:
-          SA_KEY_B64: ${{ secrets.GCP_SA_KEY_BASE64 }}
-          SA_KEY_JSON: ${{ secrets.GCP_SA_KEY }}
-          SA_KEY_FILE: ${{ runner.temp }}/sa.json
-        run: |
-          if [ -n "$SA_KEY_B64" ]; then
-            echo "$SA_KEY_B64" | base64 -d > "$SA_KEY_FILE"
-          elif [ -n "$SA_KEY_JSON" ]; then
-            echo "$SA_KEY_JSON" > "$SA_KEY_FILE"
-          else
-            echo "Missing GCP_SA_KEY_BASE64 or GCP_SA_KEY" >&2
-            exit 1
-          fi
-          project_id=$(jq -r '.project_id' "$SA_KEY_FILE")
-          echo "sa_key_file=$SA_KEY_FILE" >> "$GITHUB_OUTPUT"
-          echo "project_id=$project_id" >> "$GITHUB_OUTPUT"
-
-      - name: Auth to GCP
+      - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
-          credentials_file_path: ${{ steps.write-sa.outputs.sa_key_file }}
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID || steps.write-sa.outputs.project_id }}
-
-      - name: Validate inputs
-        env:
-          HAS_SA_B64: ${{ secrets.GCP_SA_KEY_BASE64 != '' }}
-          HAS_SA_JSON: ${{ secrets.GCP_SA_KEY != '' }}
-          HAS_PROJECT: ${{ secrets.GCP_PROJECT_ID != '' }}
-          HAS_DB: ${{ secrets.DATABASE_URL != '' }}
-          HAS_OPENAI: ${{ secrets.OPENAI_API_KEY != '' }}
-          HAS_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL != '' }}
-        run: |
-          echo "GCP_SA_KEY_BASE64 present: $HAS_SA_B64"
-          echo "GCP_SA_KEY present: $HAS_SA_JSON"
-          echo "GCP_PROJECT_ID present: $HAS_PROJECT"
-          echo "DATABASE_URL present: $HAS_DB"
-          echo "OPENAI_API_KEY present: $HAS_OPENAI"
-          echo "NEXT_PUBLIC_APP_URL present: $HAS_APP_URL"
-
-      - name: Check gcloud auth
-        run: |
-          echo "Active account: $(gcloud auth list --filter=status:ACTIVE --format='value(account)')"
-          echo "Configured project: $(gcloud config get-value project)"
-
-      - name: Enable required APIs
-        env:
-          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID || steps.write-sa.outputs.project_id }}
-        run: |
-          gcloud services enable cloudbuild.googleapis.com --project "$PROJECT_ID"
-          gcloud services enable run.googleapis.com --project "$PROJECT_ID"
-          gcloud services enable containerregistry.googleapis.com --project "$PROJECT_ID"
 
       - name: Build and push Docker image
-        env:
-          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID || steps.write-sa.outputs.project_id }}
         run: |
-          gcloud builds submit --tag gcr.io/$PROJECT_ID/drunk30-buzz
+          gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/drunk30-buzz
 
       - name: Deploy to Cloud Run
-        env:
-          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID || steps.write-sa.outputs.project_id }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
         run: |
           gcloud run deploy drunk30-buzz-service \
-            --image gcr.io/$PROJECT_ID/drunk30-buzz \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/drunk30-buzz \
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars DATABASE_URL=$DATABASE_URL,OPENAI_API_KEY=$OPENAI_API_KEY,NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+            --set-env-vars "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
+            --set-env-vars "NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}"
 
       - name: Print Cloud Run URL
-        env:
-          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID || steps.write-sa.outputs.project_id }}
         run: |
           gcloud run services describe drunk30-buzz-service \
             --region us-central1 \
