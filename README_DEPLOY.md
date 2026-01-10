@@ -30,17 +30,8 @@ Deployment guide
    - Add domain drunk30.buzz and verify via TXT record
    - Follow Firebase DNS setup to point A/CNAME records
    - Ensure rewrites in firebase.json target the Cloud Run URL
-
-<<<<<<< Updated upstream
-5) Prisma migrations: after deploying and setting DATABASE_URL to a production DB, run `npx prisma migrate deploy` against that DB.
-
-6) <!-- Deployment triggered: GCP credentials added -->
-
-
-<!-- Fresh GCP service account key deployed -->
-=======
+ 
 6) Database & Prisma
    - Set DATABASE_URL to the production Supabase Postgres
    - Apply migrations: npx prisma migrate deploy
    - Regenerate client: npx prisma generate
->>>>>>> Stashed changes
