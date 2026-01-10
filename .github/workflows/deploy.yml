@@ -24,27 +24,21 @@ jobs:
       # - GCP_WIF_PROVIDER: projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/<POOL_ID>/providers/<PROVIDER_ID>
       # - GCP_SERVICE_ACCOUNT_EMAIL: drunk30-deployer@bamboo-almanac-483903-i3.iam.gserviceaccount.com
       - name: Authenticate to GCP (Workload Identity)
-      if: secrets.GCP_WIF_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL != ''
-      uses: google-github-actions/auth@v1 
-            with:
-        if: ${{ secrets.GCP_WIF_PROVIDER && secrets.GCP_SERVICE_ACCOUNT_EMAIL }}        uses: google-github-actions/auth@v1
+        if: ${{ secrets.GCP_WIF_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL != '' }}
+        uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
 
       # Fallback: prepare service account JSON key with proper newlines (if set)
       - name: Prepare GCP key (fallback)
-      if: secrets.GCP_SA_KEY != ''
-      run: |          echo "${{ secrets.GCP_SA_KEY }}" | sed 's/\\n/\n/g' | tr -d '\r' > "${HOME}/gcloud-key.json"
-
-      - name: Authenticate with service account key (fallback)
-      if: secrets.GCP_SA_KEY != ''
-      run: |          gcloud auth activate-service-account --key-file="${HOME}/gcloud-key.json"
-        if: ${{ secrets.GCP_SA_KEY }}        run: |
+        if: ${{ secrets.GCP_SA_KEY != '' }}
+        run: |
           echo "${{ secrets.GCP_SA_KEY }}" | sed 's/\\n/\n/g' | tr -d '\r' > "${HOME}/gcloud-key.json"
 
       - name: Authenticate with service account key (fallback)
-        if: ${{ secrets.GCP_SA_KEY }}        run: |
+        if: ${{ secrets.GCP_SA_KEY != '' }}
+        run: |
           gcloud auth activate-service-account --key-file="${HOME}/gcloud-key.json"
           gcloud config set project ${{ secrets.GCP_PROJECT }}
 
@@ -54,4 +48,10 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy drunk30-buzz-service --image gcr.io/${{ secrets.GCP_PROJECT }}/drunk30-buzz --region us-central1 --platform managed --allow-unauthenticated
+          gcloud run deploy drunk30-buzz-service \
+            --image gcr.io/${{ secrets.GCP_PROJECT }}/drunk30-buzz \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }},DIRECT_URL=${{ secrets.DIRECT_URL }},NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }},NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }},SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }},STORAGE_BUCKET=${{ secrets.STORAGE_BUCKET }},CREATOR_USER_ID=${{ secrets.CREATOR_USER_ID }}" \
+            --set-env-vars "OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }},OPENAI_MODEL=${{ secrets.OPENAI_MODEL }},NEXT_PUBLIC_SITE_NAME=drunk30.buzz"
