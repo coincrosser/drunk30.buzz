@@ -10,19 +10,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-      - name: Build Docker image
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: Build and Deploy
         env:
-          CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
         run: |
-          gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/drunk30-buzz
-
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy drunk30-buzz-service --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/drunk30-buzz --region us-central1 --platform managed --allow-unauthenticated
+          gcloud builds submit --tag gcr.io/$PROJECT_ID/drunk30-buzz
+          gcloud run deploy drunk30-buzz-service \
+            --image gcr.io/$PROJECT_ID/drunk30-buzz \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated
