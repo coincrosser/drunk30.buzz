@@ -19,9 +19,11 @@ jobs:
         env:
           SA_KEY_B64: ${{ secrets.GCP_SA_KEY_BASE64 }}
         run: |
-          echo "key_json<<'EOF'" >> "$GITHUB_OUTPUT"
-          echo "$SA_KEY_B64" | base64 -d >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          {
+            echo "key_json<<EOF"
+            echo "$SA_KEY_B64" | base64 -d
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       # Authenticate using auth@v2 with decoded JSON
       - name: Auth to GCP
