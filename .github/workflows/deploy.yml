@@ -13,18 +13,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Decode base64 SA key and expose as JSON output
-      - name: Decode SA key
-        id: decode-sa
+      # Decode base64 SA key to a temp file for auth
+      - name: Write SA key file
+        id: write-sa
+        env:
+          SA_KEY_B64: ${{ secrets.GCP_SA_KEY_BASE64 }}
+          SA_KEY_FILE: ${{ runner.temp }}/sa.json
         run: |
-          decoded=$(echo "$SA_KEY_B64" | base64 -d)
-          printf "credentials_json<<EOF\n%s\nEOF\n" "$decoded" >> "$GITHUB_OUTPUT"
+          echo "$SA_KEY_B64" | base64 -d > "$SA_KEY_FILE"
+          echo "sa_key_file=$SA_KEY_FILE" >> "$GITHUB_OUTPUT"
 
-      # Authenticate using auth@v2 with decoded JSON
+      # Authenticate using auth@v2 with file path
       - name: Auth to GCP
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ steps.decode-sa.outputs.credentials_json }}
+          credentials_file_path: ${{ steps.write-sa.outputs.sa_key_file }}
 
       # Install gcloud SDK
       - name: Set up Cloud SDK
