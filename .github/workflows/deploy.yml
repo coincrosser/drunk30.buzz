@@ -14,16 +14,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+
+      # Preferred: authenticate via Workload Identity Federation (OIDC)
+      # Requires these repo secrets to be set:
+      # - GCP_WIF_PROVIDER: projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/<POOL_ID>/providers/<PROVIDER_ID>
+      # - GCP_SERVICE_ACCOUNT_EMAIL: <YOUR_SERVICE_ACCOUNT>@<PROJECT_ID>.iam.gserviceaccount.com
+      - name: Authenticate to GCP (Workload Identity)
+        if: secrets.GCP_WIF_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL != ''
+        uses: google-github-actions/auth@v1
         with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      # Fallback: prepare service account JSON key with proper newlines (if set)
+      - name: Prepare GCP key (fallback)
+        if: secrets.GCP_SA_KEY != '' && secrets.GCP_WIF_PROVIDER == '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL == ''
+        run: |
+          echo "${{ secrets.GCP_SA_KEY }}" | sed 's/\\n/\n/g' | tr -d '\r' > "${HOME}/gcloud-key.json"
+
+      - name: Authenticate with service account key (fallback)
+        if: secrets.GCP_SA_KEY != '' && secrets.GCP_WIF_PROVIDER == '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL == ''
+        run: |
+          gcloud auth activate-service-account --key-file="${HOME}/gcloud-key.json"
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Build and push Docker image
         run: |
