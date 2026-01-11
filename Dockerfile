@@ -1,24 +1,34 @@
-# Dockerfile for running Next.js on Cloud Run
-FROM node:20-alpine AS builder
+# Use Node.js 18 slim image for smaller size
+FROM node:18-slim
+
+# Set working directory
 WORKDIR /app
 
-# Install deps
+# Copy package files
 COPY package*.json ./
-RUN npm ci --production=false
 
-# Copy rest and build
+# Install production dependencies only
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy all application files
 COPY . .
-RUN npm run build
 
-FROM node:20-alpine AS runner
-WORKDIR /app
+# Create a non-root user to run the app
+RUN useradd -m -u 1001 appuser && \
+    chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose port (Cloud Run uses 8080 by default)
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:8080/health', (r) => {r.statusCode === 200 ? process.exit(0) : process.exit(1)})"
+
+# Set environment to production
 ENV NODE_ENV=production
-ENV PORT=8080
 
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/next.config.js ./next.config.js
-
-EXPOSE $PORT
-CMD ["node", "./node_modules/next/dist/bin/next", "start", "-p", "8080"]
+# Start the application
+CMD ["node", "app.js"]
