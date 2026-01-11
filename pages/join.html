@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join the Journey - drunk30.buzz</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --neon-pink: #ff006e;
+            --electric-orange: #fb5607;
+            --laser-yellow: #ffbe0b;
+            --void-black: #050505;
+            --smoke-white: #f7f7f7;
+        }
+        body {
+            background: var(--void-black);
+            color: var(--smoke-white);
+            font-family: 'Space Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+        .card {
+            max-width: 500px;
+            background: rgba(255, 0, 110, 0.05);
+            border: 2px solid var(--neon-pink);
+            border-radius: 12px;
+            padding: 3rem;
+            box-shadow: 0 0 40px rgba(255, 0, 110, 0.3);
+        }
+        h1 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 3rem;
+            background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange), var(--laser-yellow));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+        p {
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+        input {
+            width: 100%;
+            padding: 1rem;
+            margin: 0.75rem 0;
+            border: 2px solid var(--neon-pink);
+            border-radius: 6px;
+            background: rgba(255, 0, 110, 0.1);
+            color: var(--smoke-white);
+            font-family: 'Space Mono', monospace;
+            font-size: 1rem;
+        }
+        input:focus {
+            outline: none;
+            box-shadow: 0 0 20px rgba(255, 0, 110, 0.5);
+        }
+        button {
+            width: 100%;
+            padding: 1.2rem;
+            margin-top: 1rem;
+            background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange));
+            border: none;
+            border-radius: 6px;
+            color: var(--void-black);
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(255, 0, 110, 0.6);
+        }
+        .status {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            display: none;
+            text-align: center;
+        }
+        .success {
+            background: rgba(0, 255, 100, 0.1);
+            border: 2px solid rgba(0, 255, 100, 0.5);
+            color: #0f0;
+        }
+        .error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 2px solid rgba(255, 0, 0, 0.5);
+            color: #f66;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            color: var(--electric-orange);
+            text-decoration: none;
+            font-family: 'Oswald', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .back-link:hover {
+            color: var(--neon-pink);
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Join the Journey</h1>
+        <p>Get updates from someone building, recovering, and shipping. No BS. Just progress.</p>
+        <form id="signup-form">
+            <input type="email" id="email" placeholder="your@email.com" required>
+            <input type="text" id="name" placeholder="Name (optional)">
+            <button type="submit">Join the List</button>
+            <div id="status" class="status"></div>
+        </form>
+        <a href="/" class="back-link">← Back to Home</a>
+    </div>
+    
+    <script>
+        document.getElementById('signup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const status = document.getElementById('status');
+            const email = document.getElementById('email').value;
+            const name = document.getElementById('name').value;
+            
+            try {
+                const response = await fetch('/api/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, name })
+                });
+                
+                const data = await response.json();
+                
+                status.className = data.success ? 'status success' : 'status error';
+                status.textContent = data.message;
+                status.style.display = 'block';
+                
+                if (data.success) {
+                    document.getElementById('signup-form').reset();
+                }
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = 'Network error. Please try again.';
+                status.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
