@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>drunk30.buzz - Build Anyway. Recover Loudly.</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --neon-pink: #ff006e;
+            --electric-orange: #fb5607;
+            --laser-yellow: #ffbe0b;
+            --deep-purple: #3c096c;
+            --cyber-blue: #5a7fd1;
+            --void-black: #050505;
+            --smoke-white: #f7f7f7;
+        }
+        
+        body {
+            background: var(--void-black);
+            color: var(--smoke-white);
+            font-family: 'Space Mono', monospace;
+            overflow-x: hidden;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="%23ff006e" opacity="0.8"/></svg>') 10 10, auto;
+        }
+        
+        .neon-glow {
+            text-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink), 0 0 30px var(--neon-pink), 0 0 40px var(--electric-orange);
+            animation: glowPulse 2s ease-in-out infinite alternate;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange), var(--laser-yellow));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease infinite;
+        }
+        
+        @keyframes glowPulse {
+            from { text-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink); }
+            to { text-shadow: 0 0 20px var(--electric-orange), 0 0 40px var(--electric-orange), 0 0 60px var(--laser-yellow); }
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            border-bottom: 2px solid var(--neon-pink);
+            box-shadow: 0 2px 20px rgba(255, 0, 110, 0.5);
+            padding: 1rem 0;
+            margin-bottom: 3rem;
+        }
+        
+        .logo {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 2.5rem;
+            letter-spacing: 3px;
+        }
+        
+        .logo .drunk { color: var(--smoke-white); }
+        .logo .thirty { background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange), var(--laser-yellow)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        nav {
+            font-family: 'Oswald', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 1rem;
+        }
+        
+        nav a {
+            color: var(--smoke-white);
+            text-decoration: none;
+            margin: 0 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        nav a:hover {
+            color: var(--neon-pink);
+            border-bottom-color: var(--neon-pink);
+        }
+        
+        .hero {
+            text-align: center;
+            padding: 4rem 0;
+            position: relative;
+        }
+        
+        .hero h1 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 4rem;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+        }
+        
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: var(--cyber-blue);
+        }
+        
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 3rem;
+            background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange));
+            color: var(--void-black);
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            text-decoration: none;
+            border-radius: 4px;
+            border: 2px solid var(--neon-pink);
+            box-shadow: 0 0 20px rgba(255, 0, 110, 0.6);
+            transition: all 0.3s;
+            letter-spacing: 2px;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 40px rgba(255, 0, 110, 0.9);
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 4rem 0;
+        }
+        
+        .feature-card {
+            background: rgba(255, 0, 110, 0.05);
+            border: 2px solid var(--neon-pink);
+            border-radius: 8px;
+            padding: 2rem;
+            transition: all 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 0, 110, 0.4);
+            border-color: var(--electric-orange);
+        }
+        
+        .feature-card h3 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 2rem;
+            color: var(--electric-orange);
+            margin-bottom: 1rem;
+        }
+        
+        .feature-card p {
+            line-height: 1.6;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 4rem;
+            border-top: 2px solid var(--neon-pink);
+            color: var(--cyber-blue);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="drunk">drunk</span><span class="thirty">30</span>
+            </div>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/studio">Studio</a>
+                <a href="/episodes">Episodes</a>
+                <a href="/join">Join</a>
+                <a href="/links">Links</a>
+            </nav>
+        </header>
+        
+        <section class="hero">
+            <h1>
+                <span class="gradient-text">BUILD ANYWAY.</span><br>
+                <span class="neon-glow">RECOVER LOUDLY.</span><br>
+                <span class="gradient-text">SHIP CONSISTENTLY.</span>
+            </h1>
+            <p>Turn your sobriety journey into content. AI-powered tools for creators in recovery.</p>
+            <a href="/studio" class="cta-button">Launch AI Studio</a>
+        </section>
+        
+        <section class="features">
+            <div class="feature-card">
+                <h3>AI Content Studio</h3>
+                <p>Generate video ideas, scripts, thumbnails, and SEO-optimized descriptions in seconds. Built for sober creators who ship fast.</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>Recovery Journal</h3>
+                <p>Track your sober days, document wins, and turn your journey into powerful stories. Your recovery is your content.</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>Episode Manager</h3>
+                <p>Record, edit, and publish your episodes with AI-powered tools. From idea to YouTube in minutes, not hours.</p>
+            </div>
+        </section>
+        
+        <footer>
+            <p>&copy; 2026 drunk30.buzz | Build in public. Recover loudly. Ship consistently.</p>
+        </footer>
+    </div>
+</body>
+</html>
