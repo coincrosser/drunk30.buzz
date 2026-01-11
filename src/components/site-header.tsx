@@ -31,25 +31,27 @@ export function SiteHeader() {
   const links = isStudio ? studioLinks : publicLinks
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
+    <header className="sticky top-0 z-50 w-full border-b border-[hsl(var(--neon-pink))] bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 shadow-[0_0_20px_rgba(255,0,110,0.2)]">
+      <div className="container flex h-16 items-center">
         <div className="mr-4 flex">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="font-bold text-xl">drunk30</span>
-            <span className="text-muted-foreground">.buzz</span>
+          <Link href="/" className="mr-6 flex items-center space-x-2 group">
+            <span className="font-bold text-2xl animate-[logoFloat_3s_ease-in-out_infinite] font-[\'Bebas_Neue\',sans-serif] tracking-wide">
+              drunk<span className="gradient-text">30</span>
+            </span>
+            <span className="text-muted-foreground font-[\'Oswald\',sans-serif]">.buzz</span>
           </Link>
         </div>
 
-        <nav className="hidden md:flex flex-1 items-center space-x-6 text-sm font-medium">
+        <nav className="hidden md:flex flex-1 items-center space-x-8 text-sm font-medium font-[\'Oswald\',sans-serif] tracking-wide">
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               className={cn(
-                'transition-colors hover:text-foreground/80',
+                'transition-all hover:text-foreground relative uppercase tracking-wider',
                 pathname === link.href
-                  ? 'text-foreground'
-                  : 'text-foreground/60'
+                  ? 'text-foreground after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-[2px] after:bg-gradient-to-r after:from-[hsl(var(--neon-pink))] after:to-[hsl(var(--electric-orange))]'
+                  : 'text-foreground/60 hover:neon-glow'
               )}
             >
               {link.label}

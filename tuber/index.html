@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>drunk30 - Build Anyway. Recover Loudly. Ship Consistently.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --neon-pink: #ff006e;
+            --electric-orange: #fb5607;
+            --laser-yellow: #ffbe0b;
+            --deep-purple: #3a0ca3;
+            --cyber-blue: #4361ee;
+            --void-black: #050505;
+            --smoke-white: #f8f8f8;
+        }
+
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--void-black);
+            color: var(--smoke-white);
+            overflow-x: hidden;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="%23ff006e" opacity="0.8"/></svg>') 10 10, auto;
+        }
+
+        /* Animated Background Canvas */
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.15;
+        }
+
+        /* Glitch Grid Overlay */
+        .glitch-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(255, 0, 110, 0.03) 2px,
+                    rgba(255, 0, 110, 0.03) 4px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(251, 86, 7, 0.03) 2px,
+                    rgba(251, 86, 7, 0.03) 4px
+                );
+            z-index: 2;
+            pointer-events: none;
+            animation: gridShift 20s linear infinite;
+        }
+
+        @keyframes gridShift {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(4px, 4px); }
+        }
+
+        /* Main Container */
+        .container {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 1.5rem 2rem;
+            background: linear-gradient(to bottom, rgba(5, 5, 5, 0.95), transparent);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            border-bottom: 2px solid transparent;
+            background-image: linear-gradient(rgba(5, 5, 5, 0.95), rgba(5, 5, 5, 0.95)), 
+                              linear-gradient(90deg, var(--neon-pink), var(--electric-orange), var(--laser-yellow));
+            background-clip: padding-box, border-box;
+            background-origin: padding-box, border-box;
+        }
+
+        .nav-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Animated Logo */
+        .logo-container {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .logo-main {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 3rem;
+            font-weight: bold;
+            letter-spacing: 0.02em;
+            position: relative;
+            display: inline-block;
+            animation: logoFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
+        .logo-30 {
+            display: inline-block;
+            background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange), var(--laser-yellow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease infinite;
+            position: relative;
+        }
+
+        .logo-30::after {
+            content: '30';
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: -1;
+            background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: blur(10px);
+            opacity: 0.5;
+            animation: glowPulse 2s ease infinite;
+        }
+
+        @keyframes glowPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.8; }
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            list-style: none;
+            align-items: center;
+        }
+
+        .nav-links a {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+            color: var(--smoke-white);
+            text-decoration: none;
+            font-size: 1.1rem;
+            letter-spacing: 0.05em;
+            transition: all 0.3s ease;
+            position: relative;
+            text-transform: uppercase;
+        }
+
+        .nav-links a::before {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--neon-pink), var(--electric-orange));
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::before {
+            width: 100%;
+        }
+
+        .nav-links a:hover {
+            color: var(--neon-pink);
+            text-shadow: 0 0 10px rgba(255, 0, 110, 0.5);
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 0 2rem;
+        }
+
+        .hero-content {
+            text-align: center;
+            max-width: 1200px;
+            position: relative;
+        }
+
+        /* Animated ASCII Art Logo */
+        .ascii-logo {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.2;
+            color: var(--neon-pink);
+            margin-bottom: 3rem;
+            white-space: pre;
+            letter-spacing: 0.1em;
+            animation: asciiGlitch 10s infinite;
+            filter: drop-shadow(0 0 20px rgba(255, 0, 110, 0.5));
+        }
+
+        @keyframes asciiGlitch {
+            0%, 100% { 
+                color: var(--neon-pink);
+                transform: translateX(0);
+            }
+            25% {
+                color: var(--electric-orange);
+                transform: translateX(-2px);
+            }
+            50% {
+                color: var(--laser-yellow);
+                transform: translateX(2px);
+            }
+            75% {
+                color: var(--cyber-blue);
+                transform: translateX(-1px);
+            }
+        }
+
+        .hero-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(4rem, 12vw, 8rem);
+            line-height: 0.9;
+            margin-bottom: 1.5rem;
+            position: relative;
+            animation: titleSlide 1s ease-out;
+        }
+
+        @keyframes titleSlide {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .title-line {
+            display: block;
+            position: relative;
+        }
+
+        .title-line:nth-child(1) {
+            color: var(--smoke-white);
+            animation-delay: 0.2s;
+        }
+
+        .title-line:nth-child(2) {
+            background: linear-gradient(90deg, var(--neon-pink), var(--electric-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation-delay: 0.4s;
+        }
+
+        .title-line:nth-child(3) {
+            color: var(--laser-yellow);
+            text-shadow: 0 0 30px rgba(255, 190, 11, 0.5);
+            animation-delay: 0.6s;
+        }
+
+        /* Glitch Effect for Title */
+        .glitch {
+            position: relative;
+            display: inline-block;
+        }
+
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch::before {
+            animation: glitch1 0.3s infinite;
+            color: var(--neon-pink);
+            z-index: -1;
+        }
+
+        .glitch::after {
+            animation: glitch2 0.3s infinite;
+            color: var(--cyber-blue);
+            z-index: -2;
+        }
+
+        @keyframes glitch1 {
+            0%, 100% {
+                clip-path: inset(0 0 0 0);
+                transform: translate(0);
+            }
+            20% {
+                clip-path: inset(20% 0 30% 0);
+                transform: translate(-2px, 2px);
+            }
+        }
+
+        @keyframes glitch2 {
+            0%, 100% {
+                clip-path: inset(0 0 0 0);
+                transform: translate(0);
+            }
+            20% {
+                clip-path: inset(60% 0 10% 0);
+                transform: translate(2px, -2px);
+            }
+        }
+
+        /* Hero Subtitle */
+        .hero-subtitle {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.5rem;
+            color: var(--smoke-white);
+            opacity: 0.8;
+            margin-bottom: 3rem;
+            letter-spacing: 0.2em;
+            animation: fadeInUp 1s ease-out 0.8s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 0.8;
+                transform: translateY(0);
+            }
+        }
+
+        /* CTA Buttons */
+        .cta-container {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 1s ease-out 1s both;
+        }
+
+        .cta-btn {
+            padding: 1.2rem 3rem;
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .cta-primary {
+            background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange));
+            color: var(--smoke-white);
+            border: none;
+            box-shadow: 0 5px 30px rgba(255, 0, 110, 0.4);
+        }
+
+        .cta-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .cta-primary:hover::before {
+            left: 100%;
+        }
+
+        .cta-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 40px rgba(255, 0, 110, 0.6);
+        }
+
+        .cta-secondary {
+            background: transparent;
+            color: var(--smoke-white);
+            border: 2px solid var(--electric-orange);
+            position: relative;
+        }
+
+        .cta-secondary::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 100%;
+            background: var(--electric-orange);
+            transition: width 0.3s ease;
+            z-index: -1;
+        }
+
+        .cta-secondary:hover::after {
+            width: 100%;
+        }
+
+        .cta-secondary:hover {
+            color: var(--void-black);
+            transform: translateY(-3px);
+        }
+
+        /* Floating Elements */
+        .floating-shapes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .shape {
+            position: absolute;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .shape-1 {
+            width: 300px;
+            height: 300px;
+            top: 10%;
+            left: -150px;
+            background: radial-gradient(circle, rgba(255, 0, 110, 0.1), transparent);
+            animation-delay: 0s;
+        }
+
+        .shape-2 {
+            width: 200px;
+            height: 200px;
+            top: 60%;
+            right: -100px;
+            background: radial-gradient(circle, rgba(251, 86, 7, 0.1), transparent);
+            animation-delay: 5s;
+        }
+
+        .shape-3 {
+            width: 400px;
+            height: 400px;
+            bottom: -200px;
+            left: 30%;
+            background: radial-gradient(circle, rgba(255, 190, 11, 0.1), transparent);
+            animation-delay: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            25% {
+                transform: translate(100px, -50px) rotate(90deg);
+            }
+            50% {
+                transform: translate(50px, 100px) rotate(180deg);
+            }
+            75% {
+                transform: translate(-50px, 50px) rotate(270deg);
+            }
+        }
+
+        /* Footer */
+        footer {
+            padding: 2rem;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(5, 5, 5, 0.8);
+            position: relative;
+            z-index: 10;
+        }
+
+        .footer-text {
+            font-family: 'Space Mono', monospace;
+            color: var(--smoke-white);
+            opacity: 0.6;
+            font-size: 0.9rem;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .hero-title {
+                font-size: clamp(3rem, 10vw, 5rem);
+            }
+            
+            .ascii-logo {
+                font-size: 0.5rem;
+                display: none;
+            }
+            
+            .cta-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .cta-btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Matrix Background Canvas -->
+    <canvas class="matrix-bg" id="matrix"></canvas>
+    
+    <!-- Glitch Grid Overlay -->
+    <div class="glitch-grid"></div>
+    
+    <!-- Floating Shapes -->
+    <div class="floating-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Navigation -->
+        <nav>
+            <div class="nav-content">
+                <div class="logo-container">
+                    <div class="logo-main">
+                        drunk<span class="logo-30">30</span>
+                    </div>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/episodes">Episodes</a></li>
+                    <li><a href="/studio">Studio</a></li>
+                    <li><a href="/links">Links</a></li>
+                    <li><a href="/join">Join</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-content">
+                <!-- ASCII Art Logo -->
+                <pre class="ascii-logo">
+    ██████╗ ██████╗ ██╗   ██╗███╗   ██╗██╗  ██╗██████╗  ██████╗ 
+    ██╔══██╗██╔══██╗██║   ██║████╗  ██║██║ ██╔╝╚════██╗██╔═████╗
+    ██║  ██║██████╔╝██║   ██║██╔██╗ ██║█████╔╝  █████╔╝██║██╔██║
+    ██║  ██║██╔══██╗██║   ██║██║╚██╗██║██╔═██╗  ╚═══██╗████╔╝██║
+    ██████╔╝██║  ██║╚██████╔╝██║ ╚████║██║  ██╗██████╔╝╚██████╔╝
+    ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═╝╚═════╝  ╚═════╝ 
+                </pre>
+
+                <h1 class="hero-title">
+                    <span class="title-line">BUILD ANYWAY</span>
+                    <span class="title-line glitch" data-text="RECOVER LOUDLY">RECOVER LOUDLY</span>
+                    <span class="title-line">SHIP CONSISTENTLY</span>
+                </h1>
+
+                <p class="hero-subtitle">
+                    30 DAYS. ONE MISSION. NO EXCUSES.
+                </p>
+
+                <div class="cta-container">
+                    <a href="/join" class="cta-btn cta-primary">JOIN THE JOURNEY</a>
+                    <a href="/studio" class="cta-btn cta-secondary">AI STUDIO</a>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p class="footer-text">© 2024 drunk30 • Build in chaos • Ship through struggle • Rise from ruins</p>
+    </footer>
+
+    <script>
+        // Matrix Rain Effect
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const matrix = "DRUNK30BUILDRECOVERSHIP01";
+        const matrixArray = matrix.split("");
+
+        const fontSize = 10;
+        const columns = canvas.width / fontSize;
+
+        const drops = [];
+        for(let x = 0; x < columns; x++) {
+            drops[x] = 1;
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.04)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#ff006e';
+            ctx.font = fontSize + 'px monospace';
+
+            for(let i = 0; i < drops.length; i++) {
+                const text = matrixArray[Math.floor(Math.random() * matrixArray.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if(drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(drawMatrix, 35);
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Logo hover effect
+        document.querySelector('.logo-container').addEventListener('mouseover', function() {
+            this.style.transform = 'scale(1.1) rotate(-2deg)';
+        });
+
+        document.querySelector('.logo-container').addEventListener('mouseout', function() {
+            this.style.transform = 'scale(1) rotate(0deg)';
+        });
+    </script>
+</body>
+</html>
