@@ -7,6 +7,7 @@ import React from 'react'
 import type { ComponentType } from 'react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Drunk30Logo } from '@/components/drunk30-logo'
 import { cn } from '@/lib/utils'
 
 const publicLinks = [
@@ -34,11 +35,14 @@ export function SiteHeader() {
     <header className="sticky top-0 z-50 w-full border-b border-[hsl(var(--neon-pink))] bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 shadow-[0_0_20px_rgba(255,0,110,0.2)]">
       <div className="container flex h-16 items-center">
         <div className="mr-4 flex">
-          <Link href="/" className="mr-6 flex items-center space-x-2 group">
-            <span className="font-bold text-2xl animate-[logoFloat_3s_ease-in-out_infinite] font-[\'Bebas_Neue\',sans-serif] tracking-wide">
-              drunk<span className="gradient-text">30</span>
-            </span>
-            <span className="text-muted-foreground font-[\'Oswald\',sans-serif]">.buzz</span>
+          <Link href="/" className="mr-6 flex items-center space-x-3 group">
+            <Drunk30Logo size="sm" className="transition-transform group-hover:scale-110" />
+            <div className="flex flex-col">
+              <span className="font-bold text-xl font-['Bebas_Neue',sans-serif] tracking-wide leading-none">
+                drunk<span className="gradient-text">30</span>
+              </span>
+              <span className="text-xs text-muted-foreground font-['Oswald',sans-serif] leading-none">.buzz</span>
+            </div>
           </Link>
         </div>
 
