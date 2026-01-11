@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import type { Episode, Recording } from '@prisma/client'
 
 // GET /api/episodes - List episodes
 export async function GET(request: NextRequest) {
@@ -45,15 +44,13 @@ export async function GET(request: NextRequest) {
     })
 
     // Normalize recording duration to `duration` (milliseconds) for compatibility
-    const episodesNormalized = episodes.map(
-      (ep: Episode & { recordings: Recording[] }) => ({
-        ...ep,
-        recordings: ep.recordings.map((r: Recording) => ({
-          ...r,
-          duration: r.durationMs,
-        })),
-      }),
-    )
+    const episodesNormalized = episodes.map((ep) => ({
+      ...ep,
+      recordings: ep.recordings.map((r) => ({
+        ...r,
+        duration: r.durationMs,
+      })),
+    }))
 
     return NextResponse.json({ episodes: episodesNormalized })
   } catch (error) {
