@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Links - drunk30.buzz</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root { --neon-pink:#ff006e; --electric-orange:#fb5607; --laser-yellow:#ffbe0b; --void-black:#050505; --smoke-white:#f7f7f7; }
+    body { background: var(--void-black); color: var(--smoke-white); font-family: 'Space Mono', monospace; }
+    .container { max-width: 900px; margin: 0 auto; padding: 2rem; }
+    header { display:flex; align-items:center; justify-content:space-between; padding-bottom:1rem; border-bottom:2px solid var(--neon-pink); box-shadow:0 2px 20px rgba(255,0,110,.5); }
+    .logo { font-family:'Bebas Neue', cursive; font-size:2rem; }
+    .logo .thirty { background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange), var(--laser-yellow)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+    ul { list-style:none; margin-top:1.5rem; }
+    li { margin:.75rem 0; }
+    a.link { color:var(--smoke-white); text-decoration:none; border-bottom:2px solid transparent; }
+    a.link:hover { color:var(--neon-pink); border-color:var(--neon-pink); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo"><span>drunk</span><span class="thirty">30</span> Links</div>
+      <nav class="nav">
+        <a href="/">Home</a>
+        <a href="/studio">Studio</a>
+        <a href="/episodes">Episodes</a>
+        <a href="/join">Join</a>
+      </nav>
+    </header>
+    <ul>
+      <li><a class="link" href="https://youtube.com" target="_blank">YouTube</a></li>
+      <li><a class="link" href="https://twitter.com" target="_blank">Twitter</a></li>
+      <li><a class="link" href="https://github.com/coincrosser/drunk30.buzz" target="_blank">GitHub</a></li>
+      <li><a class="link" href="/studio">Launch AI Studio →</a></li>
+    </ul>
+  </div>
+</body>
+</html>
