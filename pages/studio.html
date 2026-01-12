@@ -329,12 +329,17 @@
   <div class="container">
     <header>
       <div class="logo"><span>drunk</span><span class="thirty">30</span> Studio</div>
-      <nav class="nav">
-        <a href="/">Home</a>
-        <a href="/episodes">Episodes</a>
-        <a href="/join">Join</a>
-        <a href="/links">Links</a>
-      </nav>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div id="youtube-status" style="font-size: 0.85rem; opacity: 0.8;">
+          <span id="youtube-indicator">🔴 YouTube</span>
+        </div>
+        <nav class="nav">
+          <a href="/">Home</a>
+          <a href="/episodes">Episodes</a>
+          <a href="/join">Join</a>
+          <a href="/links">Links</a>
+        </nav>
+      </div>
     </header>
 
     <div class="tabs">
@@ -440,10 +445,16 @@
       <div class="grid">
         <section class="card">
           <h3>🎥 Quick Record</h3>
-          <p>Record directly from your phone. Auto-upload to YouTube.</p>
+          <p>Record, download, or upload directly to YouTube.</p>
           <div class="card-body">
             <div class="input-group">
               <input id="recordTitle" placeholder="Video title" />
+            </div>
+            <div class="input-group">
+              <input id="recordDescription" placeholder="Video description" />
+            </div>
+            <div class="input-group">
+              <input id="recordTags" placeholder="Tags (comma-separated)" />
             </div>
             <div id="video-preview" style="width: 100%; max-width: 100%; border-radius: 6px; background: #000; margin: 1rem 0; display: none;"></div>
             <div class="actions">
@@ -454,6 +465,7 @@
             </div>
             <div id="record-output" class="output">
               <p>🎬 Ready to record. Press Start to begin.</p>
+              <p id="yt-status-msg" style="font-size: 0.8rem; opacity: 0.7; margin-top: 1rem;"></p>
             </div>
           </div>
         </section>
@@ -1081,6 +1093,7 @@
     window.addEventListener('load', () => {
       updateSobrietyCounter();
       renderAnalytics();
+      checkYouTubeStatus();
       
       // Register service worker
       if ('serviceWorker' in navigator) {
@@ -1089,6 +1102,112 @@
           .catch(err => console.log('SW registration failed:', err));
       }
     });
+
+    // YouTube OAuth Integration
+    async function checkYouTubeStatus() {
+      try {
+        const res = await fetch('/api/youtube/status');
+        const data = await res.json();
+        
+        const indicator = document.getElementById('youtube-indicator');
+        const statusMsg = document.getElementById('yt-status-msg');
+        
+        if (data.authenticated) {
+          indicator.textContent = `✅ YouTube (${data.channel.title})`;
+          indicator.style.color = 'var(--success-green)';
+          statusMsg.innerHTML = `<strong style="color: var(--success-green);">✅ Connected to YouTube!</strong><br>Channel: ${data.channel.title}<br>Subscribers: ${data.channel.subscribers || '0'}<br>Videos: ${data.channel.videos || '0'}`;
+          document.getElementById('uploadBtn').style.display = 'inline-block';
+        } else {
+          indicator.textContent = '🔴 YouTube (Connect)';
+          indicator.style.cursor = 'pointer';
+          indicator.onclick = authorizeYouTube;
+          statusMsg.innerHTML = '<a href="javascript:authorizeYouTube()" style="color: var(--laser-yellow); text-decoration: underline;">🔗 Click to connect YouTube</a>';
+        }
+      } catch (err) {
+        console.error('YouTube status check failed:', err);
+      }
+    }
+
+    function authorizeYouTube() {
+      fetch('/api/youtube/auth')
+        .then(r => r.json())
+        .then(data => {
+          if (data.authUrl) {
+            window.location.href = data.authUrl;
+          } else {
+            alert('YouTube OAuth not configured. Contact admin to set YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET.');
+          }
+        })
+        .catch(err => alert('Authorization failed: ' + err.message));
+    }
+
+    async function uploadToYouTube() {
+      if (recordedChunks.length === 0) return alert('No recording to upload');
+      
+      const title = document.getElementById('recordTitle').value || 'My Video';
+      const description = document.getElementById('recordDescription').value || `Created with drunk30.buzz AI Studio on ${new Date().toLocaleDateString()}`;
+      const tags = (document.getElementById('recordTags').value || 'youtube,creator,drunk30').split(',').map(t => t.trim());
+      
+      const output = document.getElementById('record-output');
+      output.innerHTML = '<span class="loading">📤 Uploading to YouTube...</span>';
+      
+      try {
+        // Check YouTube status first
+        const statusRes = await fetch('/api/youtube/status');
+        const statusData = await statusRes.json();
+        
+        if (!statusData.authenticated) {
+          output.innerHTML = '<p style="color: var(--danger-red);">❌ Not connected to YouTube</p><p><a href="javascript:authorizeYouTube()" style="color: var(--laser-yellow); text-decoration: underline;">Click to authorize</a></p>';
+          return;
+        }
+
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const reader = new FileReader();
+        
+        reader.onload = async (e) => {
+          try {
+            const videoData = e.target.result;
+            
+            const res = await fetch('/api/youtube/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title,
+                description,
+                tags,
+                videoBuffer: videoData,
+                mimeType: 'video/webm'
+              })
+            });
+            
+            const result = await res.json();
+            
+            if (result.success) {
+              output.innerHTML = `
+                <div style="color: var(--success-green);">
+                  <strong>✅ Video Uploaded!</strong>
+                  <p>Video ID: ${result.videoId}</p>
+                  <p>Title: ${title}</p>
+                  <a href="${result.videoUrl}" target="_blank" style="color: var(--laser-yellow); text-decoration: underline;">Watch on YouTube</a>
+                </div>
+              `;
+              recordedChunks = [];
+              document.getElementById('downloadBtn').disabled = true;
+              document.getElementById('uploadBtn').disabled = true;
+              document.getElementById('startBtn').disabled = false;
+            } else {
+              output.innerHTML = `<p style="color: var(--danger-red);">❌ ${result.message}</p>`;
+            }
+          } catch (err) {
+            output.innerHTML = `<p style="color: var(--danger-red);">❌ Upload failed: ${err.message}</p>`;
+          }
+        };
+        
+        reader.readAsArrayBuffer(blob);
+      } catch (err) {
+        output.innerHTML = `<p style="color: var(--danger-red);">❌ Error: ${err.message}</p>`;
+      }
+    }
   </script>
 </body>
 </html>

@@ -3,6 +3,8 @@ const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
 const OpenAI = require('openai');
+const { google } = require('googleapis');
+const session = require('express-session');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -11,7 +13,29 @@ const PORT = process.env.PORT || 8080;
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY || 'demo-key'
 });
-// Trust proxy - important for Cloud Run
+
+// YouTube OAuth Configuration
+const YOUTUBE_CLIENT_ID = process.env.YOUTUBE_CLIENT_ID || '';
+const YOUTUBE_CLIENT_SECRET = process.env.YOUTUBE_CLIENT_SECRET || '';
+const YOUTUBE_REDIRECT_URI = process.env.YOUTUBE_REDIRECT_URI || 'http://localhost:8080/api/youtube/callback';
+
+// Create YouTube OAuth client
+const youtube = google.youtube({
+    version: 'v3',
+    auth: new google.auth.OAuth2(
+        YOUTUBE_CLIENT_ID,
+        YOUTUBE_CLIENT_SECRET,
+        YOUTUBE_REDIRECT_URI
+    )
+});
+
+// Session configuration
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'drunk30-studio-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: process.env.NODE_ENV === 'production', httpOnly: true, sameSite: 'lax' }
+}));
 app.set('trust proxy', true);
 
 // Middleware
@@ -1008,6 +1032,247 @@ app.post('/api/analyze/channel', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Failed to analyze'
+        });
+    }
+});
+
+// ============================================
+// YOUTUBE OAUTH & UPLOAD
+// ============================================
+
+// YouTube Auth Start
+app.get('/api/youtube/auth', (req, res) => {
+    if (!YOUTUBE_CLIENT_ID || !YOUTUBE_CLIENT_SECRET) {
+        return res.json({
+            success: false,
+            message: 'YouTube OAuth not configured. Set YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET environment variables.',
+            setupUrl: 'https://console.developers.google.com/apis/credentials'
+        });
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+        YOUTUBE_CLIENT_ID,
+        YOUTUBE_CLIENT_SECRET,
+        YOUTUBE_REDIRECT_URI
+    );
+
+    const authorizeUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: ['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube'],
+        prompt: 'consent'
+    });
+
+    res.json({
+        success: true,
+        authUrl: authorizeUrl,
+        message: 'Redirect to this URL to authorize YouTube access'
+    });
+});
+
+// YouTube OAuth Callback
+app.get('/api/youtube/callback', async (req, res) => {
+    const { code, error } = req.query;
+
+    if (error) {
+        return res.send(`
+            <html>
+                <body style="background: #050505; color: #fff; font-family: monospace; text-align: center; padding: 2rem;">
+                    <h1 style="color: #ff006e;">❌ Authorization Failed</h1>
+                    <p>Error: ${error}</p>
+                    <a href="/studio" style="color: #fb5607; text-decoration: underline;">Back to Studio</a>
+                </body>
+            </html>
+        `);
+    }
+
+    try {
+        const oauth2Client = new google.auth.OAuth2(
+            YOUTUBE_CLIENT_ID,
+            YOUTUBE_CLIENT_SECRET,
+            YOUTUBE_REDIRECT_URI
+        );
+
+        const { tokens } = await oauth2Client.getToken(code);
+        req.session.youtubeTokens = tokens;
+
+        // Store channel info
+        const youtubeAuth = google.youtube({ version: 'v3', auth: oauth2Client });
+        const channelRes = await youtubeAuth.channels.list({
+            part: 'snippet,statistics',
+            mine: true
+        });
+
+        if (channelRes.data.items && channelRes.data.items.length > 0) {
+            req.session.youtubeChannel = {
+                id: channelRes.data.items[0].id,
+                title: channelRes.data.items[0].snippet.title,
+                subscribers: channelRes.data.items[0].statistics.subscriberCount,
+                views: channelRes.data.items[0].statistics.viewCount
+            };
+        }
+
+        return res.send(`
+            <html>
+                <body style="background: #050505; color: #fff; font-family: monospace; text-align: center; padding: 2rem;">
+                    <h1 style="color: #2ed573;">✅ Authorization Successful!</h1>
+                    <p style="font-size: 1.2rem; margin: 1rem 0;">YouTube is now connected to drunk30 Studio.</p>
+                    <p style="color: #ffbe0b; margin: 2rem 0; font-size: 1.5rem;">You can now upload videos directly!</p>
+                    <a href="/studio?tab=record" style="background: linear-gradient(45deg, #ff006e, #fb5607); color: #fff; padding: 1rem 2rem; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">Go to Studio</a>
+                </body>
+            </html>
+        `);
+    } catch (err) {
+        console.error('YouTube auth error:', err);
+        return res.send(`
+            <html>
+                <body style="background: #050505; color: #fff; font-family: monospace; text-align: center; padding: 2rem;">
+                    <h1 style="color: #ff006e;">❌ Error</h1>
+                    <p>${err.message}</p>
+                    <a href="/studio" style="color: #fb5607; text-decoration: underline;">Back to Studio</a>
+                </body>
+            </html>
+        `);
+    }
+});
+
+// Check YouTube Auth Status
+app.get('/api/youtube/status', (req, res) => {
+    if (req.session.youtubeTokens && req.session.youtubeChannel) {
+        return res.json({
+            success: true,
+            authenticated: true,
+            channel: req.session.youtubeChannel
+        });
+    }
+
+    res.json({
+        success: true,
+        authenticated: false,
+        authUrl: '/api/youtube/auth'
+    });
+});
+
+// YouTube Video Upload
+app.post('/api/youtube/upload', async (req, res) => {
+    try {
+        if (!req.session.youtubeTokens) {
+            return res.status(401).json({
+                success: false,
+                message: 'Not authenticated with YouTube. Please authorize first.',
+                authUrl: '/api/youtube/auth'
+            });
+        }
+
+        const { title, description, tags, videoBuffer, mimeType } = req.body;
+
+        const oauth2Client = new google.auth.OAuth2(
+            YOUTUBE_CLIENT_ID,
+            YOUTUBE_CLIENT_SECRET,
+            YOUTUBE_REDIRECT_URI
+        );
+
+        oauth2Client.setCredentials(req.session.youtubeTokens);
+
+        const youtubeAuth = google.youtube({ version: 'v3', auth: oauth2Client });
+
+        // Upload video
+        const uploadResponse = await youtubeAuth.videos.insert(
+            {
+                part: 'snippet,status',
+                requestBody: {
+                    snippet: {
+                        title: title || 'Video from drunk30 Studio',
+                        description: description || 'Created with drunk30.buzz AI Creator Studio',
+                        tags: tags || ['youtube', 'creator', 'drunk30'],
+                        categoryId: '22' // People & Blogs
+                    },
+                    status: {
+                        privacyStatus: 'public'
+                    }
+                },
+                media: {
+                    body: videoBuffer,
+                    mimeType: mimeType || 'video/webm'
+                }
+            },
+            {
+                onUploadProgress: (evt) => {
+                    const progress = (evt.bytesProcessed / evt.totalBytes * 100).toFixed(0);
+                    console.log(`Upload progress: ${progress}%`);
+                }
+            }
+        );
+
+        const videoId = uploadResponse.data.id;
+        const videoUrl = `https://youtube.com/watch?v=${videoId}`;
+
+        return res.json({
+            success: true,
+            videoId: videoId,
+            videoUrl: videoUrl,
+            message: 'Video uploaded to YouTube!',
+            channel: req.session.youtubeChannel
+        });
+
+    } catch (error) {
+        console.error('YouTube upload error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to upload to YouTube',
+            error: error.message
+        });
+    }
+});
+
+// YouTube Channel Info
+app.get('/api/youtube/channel', async (req, res) => {
+    try {
+        if (!req.session.youtubeTokens) {
+            return res.json({
+                success: false,
+                authenticated: false
+            });
+        }
+
+        const oauth2Client = new google.auth.OAuth2(
+            YOUTUBE_CLIENT_ID,
+            YOUTUBE_CLIENT_SECRET,
+            YOUTUBE_REDIRECT_URI
+        );
+
+        oauth2Client.setCredentials(req.session.youtubeTokens);
+
+        const youtubeAuth = google.youtube({ version: 'v3', auth: oauth2Client });
+
+        const response = await youtubeAuth.channels.list({
+            part: 'snippet,statistics,contentDetails',
+            mine: true
+        });
+
+        if (response.data.items && response.data.items.length > 0) {
+            const channel = response.data.items[0];
+            return res.json({
+                success: true,
+                channel: {
+                    id: channel.id,
+                    title: channel.snippet.title,
+                    description: channel.snippet.description,
+                    thumbnail: channel.snippet.thumbnails.medium?.url,
+                    subscribers: channel.statistics.subscriberCount,
+                    views: channel.statistics.viewCount,
+                    videos: channel.statistics.videoCount,
+                    uploadsPlaylistId: channel.contentDetails.relatedPlaylists.uploads
+                }
+            });
+        }
+
+        res.json({ success: false, message: 'No channel found' });
+
+    } catch (error) {
+        console.error('Channel info error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch channel info'
         });
     }
 });
