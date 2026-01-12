@@ -500,7 +500,41 @@
             <div class="input-group">
               <input id="recordTags" placeholder="Tags (comma-separated)" />
             </div>
-            <div id="video-preview" style="width: 100%; max-width: 100%; border-radius: 6px; background: #000; margin: 1rem 0; display: none;"></div>
+            
+            <!-- Background Avatar Selector -->
+            <div style="margin: 1rem 0; padding: 1rem; background: rgba(255, 0, 110, 0.05); border: 2px solid var(--neon-pink); border-radius: 0.5rem;">
+              <strong style="color: var(--laser-yellow); display: block; margin-bottom: 0.75rem;">🎨 Background Avatar</strong>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                <button onclick="setBackgroundMode('none')" class="bg-btn active" style="flex: 1; padding: 0.5rem; background: var(--neon-pink); color: #000; border: none; border-radius: 0.25rem; cursor: pointer; font-weight: bold;">None</button>
+                <button onclick="setBackgroundMode('solid')" class="bg-btn" style="flex: 1; padding: 0.5rem; background: rgba(255, 165, 0, 0.5); color: #fff; border: 1px solid var(--neon-orange); border-radius: 0.25rem; cursor: pointer; font-weight: bold;">Solid Color</button>
+                <button onclick="setBackgroundMode('upload')" class="bg-btn" style="flex: 1; padding: 0.5rem; background: rgba(100, 200, 255, 0.5); color: #fff; border: 1px solid var(--cyber-blue); border-radius: 0.25rem; cursor: pointer; font-weight: bold;">Upload</button>
+                <button onclick="setBackgroundMode('url')" class="bg-btn" style="flex: 1; padding: 0.5rem; background: rgba(255, 190, 11, 0.5); color: #000; border: 1px solid var(--laser-yellow); border-radius: 0.25rem; cursor: pointer; font-weight: bold;">URL</button>
+              </div>
+              
+              <!-- Solid Color Mode -->
+              <div id="bg-solid-controls" style="display: none; gap: 0.5rem; margin-bottom: 0.75rem;">
+                <input id="bgColor" type="color" value="#ff006e" style="width: 60px; height: 40px; border-radius: 0.25rem; cursor: pointer;" onchange="updateBackgroundPreview()" />
+                <div style="font-size: 0.8rem; color: #ccc;">Pick a color for your background</div>
+              </div>
+              
+              <!-- Upload Mode -->
+              <div id="bg-upload-controls" style="display: none; margin-bottom: 0.75rem;">
+                <input id="bgUpload" type="file" accept="image/*" onchange="handleBackgroundUpload(event)" style="color: #fff;" />
+                <div style="font-size: 0.8rem; color: #ccc; margin-top: 0.5rem;">Upload PNG/JPG avatar (transparent backgrounds work best)</div>
+              </div>
+              
+              <!-- URL Mode -->
+              <div id="bg-url-controls" style="display: none; margin-bottom: 0.75rem;">
+                <input id="bgUrl" placeholder="Image URL (e.g., https://...jpg)" style="width: 100%; padding: 0.5rem; background: var(--card-bg); color: #fff; border: 1px solid var(--neon-pink); border-radius: 0.25rem; margin-bottom: 0.5rem;" onchange="updateBackgroundPreview()" />
+                <div style="font-size: 0.8rem; color: #ccc;">Paste image URL from web</div>
+              </div>
+              
+              <div id="bg-preview-mini" style="width: 100%; height: 80px; background: #000; border-radius: 0.25rem; display: flex; align-items: center; justify-content: center; color: #666; font-size: 0.8rem; overflow: hidden;">
+                Preview
+              </div>
+            </div>
+            
+            <div id="video-preview" style="width: 100%; max-width: 100%; border-radius: 6px; background: #000; margin: 1rem 0; display: none; position: relative;"></div>
             <div class="actions">
               <button class="secondary" id="startBtn" onclick="startRecording()">🔴 Start Recording</button>
               <button class="secondary" id="stopBtn" onclick="stopRecording()" disabled>⏹ Stop</button>
@@ -668,6 +702,88 @@
       });
     }
 
+    // ==================== BACKGROUND AVATAR SELECTION ====================
+    let backgroundMode = 'none';
+    let backgroundImage = null;
+
+    function setBackgroundMode(mode) {
+      backgroundMode = mode;
+      
+      // Update button styles
+      document.querySelectorAll('.bg-btn').forEach(btn => {
+        btn.style.opacity = '0.6';
+        btn.style.border = 'none';
+      });
+      event.target.style.opacity = '1';
+      event.target.style.borderWidth = '2px';
+      
+      // Show/hide controls
+      document.getElementById('bg-solid-controls').style.display = mode === 'solid' ? 'flex' : 'none';
+      document.getElementById('bg-upload-controls').style.display = mode === 'upload' ? 'block' : 'none';
+      document.getElementById('bg-url-controls').style.display = mode === 'url' ? 'block' : 'none';
+      
+      updateBackgroundPreview();
+    }
+
+    function handleBackgroundUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          backgroundImage = e.target.result;
+          updateBackgroundPreview();
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function updateBackgroundPreview() {
+      const preview = document.getElementById('bg-preview-mini');
+      preview.style.backgroundSize = 'cover';
+      preview.style.backgroundPosition = 'center';
+      preview.style.backgroundRepeat = 'no-repeat';
+      
+      if (backgroundMode === 'none') {
+        preview.style.background = '#000';
+        preview.innerHTML = '<span style="color: #666;">No background</span>';
+      } else if (backgroundMode === 'solid') {
+        const color = document.getElementById('bgColor').value;
+        preview.style.background = color;
+        preview.innerHTML = '';
+      } else if (backgroundMode === 'upload' && backgroundImage) {
+        preview.style.backgroundImage = `url(${backgroundImage})`;
+        preview.innerHTML = '';
+      } else if (backgroundMode === 'url') {
+        const url = document.getElementById('bgUrl').value;
+        if (url) {
+          preview.style.backgroundImage = `url(${url})`;
+          preview.innerHTML = '';
+        }
+      }
+    }
+
+    function applyBackgroundToVideo(canvas, ctx) {
+      if (backgroundMode === 'solid') {
+        const color = document.getElementById('bgColor').value;
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else if (backgroundMode === 'upload' && backgroundImage) {
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = backgroundImage;
+      } else if (backgroundMode === 'url') {
+        const url = document.getElementById('bgUrl').value;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = url;
+      }
+    }
+
     // ==================== RECORDING ====================
     async function startRecording() {
       try {
@@ -683,13 +799,83 @@
         
         const video = document.getElementById('video-preview');
         video.style.display = 'block';
-        video.srcObject = stream;
-        video.play();
+        video.innerHTML = ''; // Clear previous content
+        
+        const videoElement = document.createElement('video');
+        videoElement.srcObject = stream;
+        videoElement.play();
+        
+        // If background is set, append preview with styling
+        if (backgroundMode !== 'none') {
+          video.style.position = 'relative';
+          const bg = document.createElement('div');
+          bg.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;';
+          
+          if (backgroundMode === 'solid') {
+            const color = document.getElementById('bgColor').value;
+            bg.style.background = color;
+          } else if (backgroundMode === 'upload' && backgroundImage) {
+            bg.style.backgroundImage = `url(${backgroundImage})`;
+            bg.style.backgroundSize = 'cover';
+          } else if (backgroundMode === 'url') {
+            const url = document.getElementById('bgUrl').value;
+            bg.style.backgroundImage = `url(${url})`;
+            bg.style.backgroundSize = 'cover';
+          }
+          
+          video.appendChild(bg);
+        }
+        
+        video.appendChild(videoElement);
+        videoElement.style.width = '100%';
+        videoElement.style.maxWidth = '100%';
         
         recordedChunks = [];
-        mediaRecorder = new MediaRecorder(stream, {
+        
+        // Use canvas to composite video + background
+        const canvasStream = canvas.captureStream(30);
+        const audioTracks = stream.getAudioTracks();
+        if (audioTracks.length > 0) {
+          canvasStream.addTrack(audioTracks[0]);
+        }
+        
+        mediaRecorder = new MediaRecorder(canvasStream, {
           mimeType: 'video/webm;codecs=vp9,opus'
         });
+        
+        // Animation loop to draw to canvas
+        let animationId;
+        const drawFrame = () => {
+          // Draw background
+          if (backgroundMode === 'solid') {
+            const color = document.getElementById('bgColor').value;
+            ctx.fillStyle = color;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          } else if (backgroundMode === 'upload' && backgroundImage) {
+            const img = new Image();
+            img.onload = () => {
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.src = backgroundImage;
+          } else if (backgroundMode === 'url') {
+            const url = document.getElementById('bgUrl').value;
+            if (url) {
+              const img = new Image();
+              img.crossOrigin = 'anonymous';
+              img.onload = () => {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              };
+              img.src = url;
+            }
+          }
+          
+          // Draw video on top
+          if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+          }
+          
+          animationId = requestAnimationFrame(drawFrame);
+        };
         
         mediaRecorder.ondataavailable = (event) => {
           if (event.data.size > 0) recordedChunks.push(event.data);
@@ -699,6 +885,7 @@
           document.getElementById('record-output').innerHTML = '<span class="loading">🔴 RECORDING...</span>';
           document.getElementById('startBtn').disabled = true;
           document.getElementById('stopBtn').disabled = false;
+          drawFrame();
         };
         
         mediaRecorder.start();
