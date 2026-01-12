@@ -752,15 +752,50 @@ app.post('/api/generate/youtube-hacks', async (req, res) => {
 app.post('/api/generate/backgrounds', async (req, res) => {
     try {
         const { topic } = req.body;
-        const vibe = topic || 'professional';
+        const vibe = topic || 'professional YouTube video background';
 
-        // Free image sources
+        const backgroundImages = [];
+
+        // ✅ AI-Generated Backgrounds using DALL-E 3
+        if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'demo-key') {
+            try {
+                // Generate 1 primary AI background for speed (can be extended to 2-3)
+                const prompt = `Ultra-professional YouTube video background for "${vibe}" niche. 16:9 aspect ratio, 1920x1080px. Cinematic, modern, high production value. Neon cyberpunk aesthetic with pink #ff006e, orange #fb5607, yellow accents. Bokeh effects, subtle gradients, professional lighting. Suitable for content thumbnails and video overlays. Minimalist, clean design with space for text. Dark background dominant. 4K quality.`;
+
+                console.log(`🎨 Generating AI background for: "${vibe}"`);
+                
+                const imageResponse = await openai.images.generate({
+                    model: 'dall-e-3',
+                    prompt: prompt,
+                    n: 1,
+                    size: '1024x1024', // DALL-E 3 supports 1024x1024
+                    quality: 'hd',
+                    style: 'vivid'
+                });
+
+                if (imageResponse.data && imageResponse.data.length > 0) {
+                    backgroundImages.push({
+                        title: `AI-Generated ${vibe} Background (DALL-E)`,
+                        url: imageResponse.data[0].url,
+                        credit: 'DALL-E 3',
+                        revised_prompt: imageResponse.data[0].revised_prompt,
+                        generated_at: new Date().toISOString()
+                    });
+                }
+            } catch (aiError) {
+                console.error('DALL-E Generation Error:', aiError.message);
+                // Fall back to Unsplash if DALL-E fails
+            }
+        }
+
+        // 📸 Fallback: Unsplash Backgrounds (if DALL-E unavailable or as alternatives)
         const unsplashKeywords = {
             'neon cyberpunk': 'neon+dark+digital',
             'nature': 'nature+landscape',
             'minimal': 'minimal+clean+white',
             'retro': 'retro+vintage+80s',
-            'space': 'space+universe+stars'
+            'space': 'space+universe+stars',
+            'professional': 'professional+corporate+clean'
         };
         
         let query = 'abstract+digital';
@@ -770,7 +805,19 @@ app.post('/api/generate/backgrounds', async (req, res) => {
             }
         });
 
-        // Free music sources
+        // Add 2 Unsplash backups
+        backgroundImages.push({
+            title: `${vibe} Unsplash Background 1`,
+            url: `https://source.unsplash.com/1920x1080/?${query}`,
+            credit: 'Unsplash'
+        });
+        backgroundImages.push({
+            title: `${vibe} Unsplash Background 2`,
+            url: `https://source.unsplash.com/1920x1080/?${query},dark`,
+            credit: 'Unsplash'
+        });
+
+        // 🎵 Free music sources
         const musicSources = [
             {
                 title: 'Epidemic Sound',
@@ -794,36 +841,20 @@ app.post('/api/generate/backgrounds', async (req, res) => {
             }
         ];
 
-        // Simulate finding images (in production, use Unsplash API key)
-        const backgroundImages = [
-            {
-                title: `${vibe} Background 1`,
-                url: `https://source.unsplash.com/1920x1080/?${query}`,
-                credit: 'Unsplash'
-            },
-            {
-                title: `${vibe} Background 2`,
-                url: `https://source.unsplash.com/1920x1080/?${query},abstract`,
-                credit: 'Unsplash'
-            },
-            {
-                title: `${vibe} Background 3`,
-                url: `https://source.unsplash.com/1920x1080/?${query},dark`,
-                credit: 'Unsplash'
-            }
-        ];
-
         return res.json({
             success: true,
             vibe: vibe,
             images: backgroundImages,
             music: musicSources.slice(0, 3),
+            aiGenerated: backgroundImages.some(img => img.credit === 'DALL-E 3'),
             tips: [
+                '✨ AI backgrounds are generated live - unique every time',
                 '16:9 aspect ratio for YouTube videos',
+                '🎨 Neon cyberpunk aesthetic built into AI prompts',
                 'Use high contrast for text visibility',
-                'Test colors on both light and dark monitors',
                 'Add subtle motion or animation for retention',
-                'Ensure 60 FPS playback for smooth visuals'
+                'Ensure 60 FPS playback for smooth visuals',
+                '💡 Right-click AI backgrounds to download'
             ]
         });
         
