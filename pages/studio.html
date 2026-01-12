@@ -345,9 +345,11 @@
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab('ideas')">💡 Ideas</button>
       <button class="tab-btn" onclick="switchTab('script')">📝 Script</button>
+      <button class="tab-btn" onclick="switchTab('hooks')">🪝 Hooks</button>
       <button class="tab-btn" onclick="switchTab('youtube')">🚀 YouTube Hacks</button>
       <button class="tab-btn" onclick="switchTab('seo')">🔍 SEO Pack</button>
       <button class="tab-btn" onclick="switchTab('backgrounds')">🎨 Backgrounds</button>
+      <button class="tab-btn" onclick="switchTab('social')">📱 Social Posts</button>
       <button class="tab-btn" onclick="switchTab('record')">🎥 Record</button>
       <button class="tab-btn" onclick="switchTab('crm')">👥 CRM</button>
       <button class="tab-btn" onclick="switchTab('recovery')">💪 Recovery</button>
@@ -384,6 +386,30 @@
               <button onclick="generateScript()">Write Script</button>
             </div>
             <div id="script-output" class="output">Script will appear here...</div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Hooks Tab (NEW) -->
+    <div id="hooks" class="tab-content">
+      <div class="grid">
+        <section class="card">
+          <h3>🪝 Viral Hooks</h3>
+          <p>AI-generated opening lines that STOP scrolling. 10 unique hooks per generation.</p>
+          <div class="card-body">
+            <div class="input-group">
+              <input id="hookTopic" placeholder="Video topic or niche" />
+              <select id="hookStyle" style="padding: 0.75rem; background: var(--card-bg); color: var(--neon-pink); border: 2px solid var(--neon-pink); border-radius: 0.5rem;">
+                <option value="curiosity">Curiosity Gap</option>
+                <option value="question">Question</option>
+                <option value="statement">Bold Statement</option>
+                <option value="contrast">Contrast/Contradiction</option>
+                <option value="story">Story Hook</option>
+              </select>
+              <button onclick="generateHooks()">Generate Hooks</button>
+            </div>
+            <div id="hooks-output" class="output">Hooks will appear here...</div>
           </div>
         </section>
       </div>
@@ -435,6 +461,24 @@
               <button onclick="generateBackgrounds()">Generate Backgrounds</button>
             </div>
             <div id="bg-output" class="output">Background suggestions will appear here...</div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Social Posts Tab (NEW) -->
+    <div id="social" class="tab-content">
+      <div class="grid">
+        <section class="card">
+          <h3>📱 Social Post Generator</h3>
+          <p>Auto-generate optimized captions for YouTube, Instagram, TikTok, Twitter, LinkedIn, Pinterest.</p>
+          <div class="card-body">
+            <div class="input-group">
+              <input id="socialTitle" placeholder="Video title" />
+              <textarea id="socialDesc" placeholder="Video description (optional)" style="padding: 0.75rem; background: var(--card-bg); color: #fff; border: 2px solid var(--neon-pink); border-radius: 0.5rem; resize: vertical; min-height: 80px;"></textarea>
+              <button onclick="generateSocialPosts()">Generate Posts</button>
+            </div>
+            <div id="social-output" class="output">Social posts will appear here...</div>
           </div>
         </section>
       </div>
@@ -1022,6 +1066,110 @@
       } catch (err) {
         output.textContent = 'Thumbnail generation coming soon. Use DALL-E manually for now.';
       }
+    }
+
+    // 🪝 Viral Hooks Generator
+    async function generateHooks() {
+      const topic = document.getElementById('hookTopic').value || 'general';
+      const style = document.getElementById('hookStyle').value || 'curiosity';
+      const output = document.getElementById('hooks-output');
+      output.innerHTML = '<span class="loading">🪝 Generating viral hooks...</span>';
+      try {
+        const res = await fetch('/api/generate/hooks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic, style })
+        });
+        const data = await res.json();
+        output.innerHTML = '';
+        
+        if (data.hooks && Array.isArray(data.hooks)) {
+          const container = document.createElement('div');
+          const badge = document.createElement('div');
+          badge.style.cssText = 'padding: 0.75rem; background: linear-gradient(135deg, #ff006e, #ffbe0b); color: #000; border-radius: 0.25rem; margin-bottom: 1rem; font-weight: bold;';
+          badge.innerHTML = `✨ ${data.styleUsed || style} hooks - Copy & paste directly to video`;
+          container.appendChild(badge);
+          
+          const list = document.createElement('ul');
+          list.className = 'output-list';
+          data.hooks.forEach((hook, i) => {
+            const li = document.createElement('li');
+            li.style.cssText = 'cursor: pointer; padding: 0.75rem; background: rgba(255, 0, 110, 0.05); border-left: 3px solid var(--neon-pink); transition: all 0.2s;';
+            li.innerHTML = `<strong style="color: var(--laser-yellow);">Hook ${i+1}:</strong> "${hook}"`;
+            li.onmouseover = () => li.style.background = 'rgba(255, 0, 110, 0.15)';
+            li.onmouseout = () => li.style.background = 'rgba(255, 0, 110, 0.05)';
+            li.onclick = () => {
+              navigator.clipboard.writeText(hook);
+              li.innerHTML += ' <span style="color: var(--laser-yellow);">✓ Copied</span>';
+              setTimeout(() => {
+                li.innerHTML = `<strong style="color: var(--laser-yellow);">Hook ${i+1}:</strong> "${hook}"`;
+              }, 2000);
+            };
+            list.appendChild(li);
+          });
+          container.appendChild(list);
+          output.appendChild(container);
+        }
+      } catch (err) {
+        output.innerHTML = `<span style="color: var(--neon-pink);">❌ ${err.message}</span>`;
+      }
+    }
+
+    // 📱 Social Post Generator
+    async function generateSocialPosts() {
+      const videoTitle = document.getElementById('socialTitle').value;
+      const videoDescription = document.getElementById('socialDesc').value;
+      const topic = videoTitle || 'my video';
+      const output = document.getElementById('social-output');
+      output.innerHTML = '<span class="loading">📱 Generating social posts...</span>';
+      try {
+        const res = await fetch('/api/generate/social-posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ videoTitle, videoDescription, topic })
+        });
+        const data = await res.json();
+        output.innerHTML = '';
+        
+        if (data.posts) {
+          const container = document.createElement('div');
+          const platforms = [
+            { key: 'youtube', emoji: '📺', name: 'YouTube Shorts' },
+            { key: 'instagram', emoji: '📷', name: 'Instagram Reels' },
+            { key: 'tiktok', emoji: '🎵', name: 'TikTok' },
+            { key: 'twitter', emoji: '𝕏', name: 'Twitter/X' },
+            { key: 'linkedin', emoji: '💼', name: 'LinkedIn' },
+            { key: 'pinterest', emoji: '📌', name: 'Pinterest' }
+          ];
+          
+          platforms.forEach(p => {
+            if (data.posts[p.key]) {
+              const card = document.createElement('div');
+              card.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: rgba(255, 0, 110, 0.05); border: 2px solid var(--neon-pink); border-radius: 0.5rem;';
+              card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                  <strong style="color: var(--laser-yellow);">${p.emoji} ${p.name}</strong>
+                  <button onclick="copyToClipboard('${data.posts[p.key].replace(/'/g, "\\'")}', this)" style="padding: 0.25rem 0.75rem; background: var(--neon-pink); color: #000; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.9rem;">📋 Copy</button>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 0.25rem; color: #ccc; font-family: 'Space Mono', monospace; word-break: break-word;">
+                  ${data.posts[p.key]}
+                </div>
+              `;
+              container.appendChild(card);
+            }
+          });
+          output.appendChild(container);
+        }
+      } catch (err) {
+        output.innerHTML = `<span style="color: var(--neon-pink);">❌ ${err.message}</span>`;
+      }
+    }
+
+    function copyToClipboard(text, btn) {
+      navigator.clipboard.writeText(text);
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => btn.textContent = orig, 2000);
     }
 
     // ==================== CRM ====================

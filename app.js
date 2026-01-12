@@ -748,6 +748,118 @@ app.post('/api/generate/youtube-hacks', async (req, res) => {
     }
 });
 
+// 🪝 Viral Hooks Generator - Specialized opening lines
+app.post('/api/generate/hooks', async (req, res) => {
+    try {
+        const { topic, style } = req.body;
+        const niche = topic || 'general';
+        const hookStyle = style || 'curiosity';
+
+        if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'demo-key') {
+            const completion = await openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [{
+                    role: 'user',
+                    content: `Generate 10 VIRAL opening hooks for a YouTube video about "${niche}". Style: ${hookStyle} (curiosity/question/statement/contrast/story). Each hook should be 5-15 words, attention-grabbing, make viewers STOP scrolling. Format as JSON: { hooks: [...], styleUsed: "${hookStyle}", niche: "${niche}" }`
+                }],
+                temperature: 0.9
+            });
+            
+            try {
+                const data = JSON.parse(completion.choices[0].message.content);
+                return res.json({ success: true, ...data, source: 'AI' });
+            } catch (e) {
+                return res.json({ success: true, raw: completion.choices[0].message.content, source: 'AI' });
+            }
+        }
+
+        // Fallback hooks
+        const fallbackHooks = [
+            `"I spent $10k on ${niche}... Here's what I learned."`,
+            `"This ${niche} hack changed my life."`,
+            `"Stop wasting money on ${niche}."`,
+            `"The BEST ${niche} tip nobody talks about."`,
+            `"This ${niche} trick went viral for a reason."`,
+            `"I tested every ${niche}... Here's the winner."`,
+            `"Nobody tells you this about ${niche}."`,
+            `"${niche} in 60 seconds."`,
+            `"You've been doing ${niche} wrong your entire life."`,
+            `"This ${niche} method is INSANE."`
+        ];
+
+        return res.json({
+            success: true,
+            hooks: fallbackHooks,
+            styleUsed: hookStyle,
+            niche: niche,
+            source: 'fallback'
+        });
+    } catch (error) {
+        console.error('Hooks error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to generate hooks'
+        });
+    }
+});
+
+// 📱 Social Post Generator - Cross-platform automation
+app.post('/api/generate/social-posts', async (req, res) => {
+    try {
+        const { videoTitle, videoDescription, topic } = req.body;
+        const content = videoDescription || videoTitle || topic || 'my video';
+
+        if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'demo-key') {
+            const completion = await openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [{
+                    role: 'user',
+                    content: `Based on this content: "${content}", generate social media posts in JSON format with these exact keys:
+                    {
+                      "youtube": "caption for YouTube Shorts (60 chars max, emoji)",
+                      "instagram": "caption for Instagram Reels (150 chars, hashtags)",
+                      "tiktok": "caption for TikTok (30 chars max, trendy)",
+                      "twitter": "caption for Twitter/X (140 chars)",
+                      "linkedin": "caption for LinkedIn (150 chars, professional)",
+                      "pinterest": "caption for Pinterest (100 chars, call-to-action)"
+                    }
+                    Make each platform-specific, engaging, with relevant emojis.`
+                }],
+                temperature: 0.85
+            });
+            
+            try {
+                const posts = JSON.parse(completion.choices[0].message.content);
+                return res.json({ success: true, posts: posts, source: 'AI' });
+            } catch (e) {
+                return res.json({ success: true, raw: completion.choices[0].message.content, source: 'AI' });
+            }
+        }
+
+        // Fallback posts
+        const fallbackPosts = {
+            youtube: '🎬 New video dropping! Link in bio 👆',
+            instagram: '📱 Just uploaded a new reel! Link in bio. #creator #content',
+            tiktok: '✨ New video! Watch now',
+            twitter: '🎥 Fresh content just went live. Check it out!',
+            linkedin: '📌 Excited to share new content with you. See what I\'ve been working on.',
+            pinterest: '📌 Click to watch → [your video]'
+        };
+
+        return res.json({
+            success: true,
+            posts: fallbackPosts,
+            source: 'fallback'
+        });
+    } catch (error) {
+        console.error('Social posts error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to generate social posts'
+        });
+    }
+});
+
 // Background Generator endpoint
 app.post('/api/generate/backgrounds', async (req, res) => {
     try {
