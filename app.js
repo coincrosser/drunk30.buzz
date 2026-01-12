@@ -2,10 +2,15 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
+const OpenAI = require('openai');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Initialize OpenAI (will use OPENAI_API_KEY env var)
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY || 'demo-key'
+});
 // Trust proxy - important for Cloud Run
 app.set('trust proxy', true);
 
@@ -497,7 +502,22 @@ app.post('/api/subscribe', async (req, res) => {
 app.post('/api/generate/ideas', async (req, res) => {
     try {
         const { niche, audience } = req.body;
+
+        if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'demo-key') {
+            const completion = await openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [{
+                    role: 'user',
+                    content: `Generate 10 viral YouTube video ideas for the niche: ${niche || 'sobriety and recovery'}. Make them clickable, emotional, and valuable. Return just the list, numbered.`
+                }],
+                temperature: 0.9
+            });
+            
+            const aiIdeas = completion.choices[0].message.content.split('\n').filter(line => line.trim());
+            return res.json({ success: true, ideas: aiIdeas, niche: niche || 'General', source: 'AI' });
+        }
         
+        // Fallback ideas when no API key
         const ideas = [
             `10 ${niche || 'YouTube'} Mistakes That Will Ruin Your Channel`,
             `Why ${niche || 'Content'} Creators Fail (Harsh Truth)`,
@@ -517,6 +537,167 @@ app.post('/api/generate/ideas', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Failed to generate ideas'
+        });
+    }
+});
+
+// YouTube Hacks endpoint
+app.post('/api/generate/youtube-hacks', async (req, res) => {
+    try {
+        const { topic } = req.body;
+        const niche = topic || 'general YouTube';
+
+        if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'demo-key') {
+            const completion = await openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [{
+                    role: 'user',
+                    content: `Generate 5 trending keywords, 10 viral hashtags, best posting times, and a viral hook for: "${niche}". Format as JSON with keys: trendingKeywords (array), hashtags (array), bestTimes (array), viralHook (string).`
+                }],
+                temperature: 0.8
+            });
+            
+            try {
+                const hacks = JSON.parse(completion.choices[0].message.content);
+                return res.json({ success: true, ...hacks, source: 'AI' });
+            } catch (e) {
+                return res.json({ success: true, raw: completion.choices[0].message.content, source: 'AI' });
+            }
+        }
+        
+        // Fallback hacks
+        const keywords = [
+            `${niche} tutorial 2024`,
+            `how to ${niche}`,
+            `${niche} tips and tricks`,
+            `${niche} hacks that work`,
+            `best ${niche} channel`
+        ];
+        
+        const hashtags = [
+            '#YouTube',
+            `#${niche.replace(/\s+/g, '')}`,
+            '#Tutorial',
+            '#Tips',
+            '#Creator',
+            '#Hacks',
+            '#2024',
+            '#ContentCreator',
+            '#Growth',
+            '#FYP'
+        ];
+        
+        const bestTimes = [
+            'Tuesday-Thursday 2-4 PM (US Peak)',
+            'Saturday 9-11 AM (Weekend viewers)',
+            'Wednesday 6-9 PM (Evening commute)',
+            'Sunday 7-9 PM (Relaxation time)'
+        ];
+        
+        const viralHook = `"If you're interested in ${niche}, watch this before..."`;
+        
+        return res.json({
+            success: true,
+            trendingKeywords: keywords,
+            hashtags: hashtags,
+            bestTimes: bestTimes,
+            viralHook: viralHook,
+            source: 'fallback'
+        });
+        
+    } catch (error) {
+        console.error('YouTube hacks error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to generate YouTube hacks'
+        });
+    }
+});
+
+// Background Generator endpoint
+app.post('/api/generate/backgrounds', async (req, res) => {
+    try {
+        const { topic } = req.body;
+        const vibe = topic || 'professional';
+
+        // Free image sources
+        const unsplashKeywords = {
+            'neon cyberpunk': 'neon+dark+digital',
+            'nature': 'nature+landscape',
+            'minimal': 'minimal+clean+white',
+            'retro': 'retro+vintage+80s',
+            'space': 'space+universe+stars'
+        };
+        
+        let query = 'abstract+digital';
+        Object.keys(unsplashKeywords).forEach(key => {
+            if (vibe.toLowerCase().includes(key)) {
+                query = unsplashKeywords[key];
+            }
+        });
+
+        // Free music sources
+        const musicSources = [
+            {
+                title: 'Epidemic Sound',
+                url: 'https://www.epidemicsound.com/',
+                description: 'Royalty-free music for YouTube'
+            },
+            {
+                title: 'YouTube Audio Library',
+                url: 'https://www.youtube.com/audiolibrary',
+                description: 'Free music and SFX from YouTube'
+            },
+            {
+                title: 'Pixabay Music',
+                url: 'https://pixabay.com/music/',
+                description: '1000+ free music tracks'
+            },
+            {
+                title: 'Free Music Archive',
+                url: 'https://freemusicarchive.org/',
+                description: 'Creative commons music'
+            }
+        ];
+
+        // Simulate finding images (in production, use Unsplash API key)
+        const backgroundImages = [
+            {
+                title: `${vibe} Background 1`,
+                url: `https://source.unsplash.com/1920x1080/?${query}`,
+                credit: 'Unsplash'
+            },
+            {
+                title: `${vibe} Background 2`,
+                url: `https://source.unsplash.com/1920x1080/?${query},abstract`,
+                credit: 'Unsplash'
+            },
+            {
+                title: `${vibe} Background 3`,
+                url: `https://source.unsplash.com/1920x1080/?${query},dark`,
+                credit: 'Unsplash'
+            }
+        ];
+
+        return res.json({
+            success: true,
+            vibe: vibe,
+            images: backgroundImages,
+            music: musicSources.slice(0, 3),
+            tips: [
+                '16:9 aspect ratio for YouTube videos',
+                'Use high contrast for text visibility',
+                'Test colors on both light and dark monitors',
+                'Add subtle motion or animation for retention',
+                'Ensure 60 FPS playback for smooth visuals'
+            ]
+        });
+        
+    } catch (error) {
+        console.error('Background generation error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to generate backgrounds'
         });
     }
 });
@@ -608,16 +789,24 @@ app.post('/api/generate/thumbnail', async (req, res) => {
 app.post('/api/generate/script', async (req, res) => {
     try {
         const { topic } = req.body;
+
+        if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'demo-key') {
+            const completion = await openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [{
+                    role: 'user',
+                    content: `Create a YouTube video script outline for: "${topic || 'sobriety journey'}". Include: Hook (0-15s), Intro (15-45s), Main Content (3 key points), and CTA. Make it compelling and actionable.`
+                }],
+                temperature: 0.7
+            });
+            
+            return res.json({ success: true, topic: topic || 'General', script: completion.choices[0].message.content, source: 'AI' });
+        }
         
+        // Fallback outline
         const outline = {
-            hook: {
-                duration: '0-15 seconds',
-                content: `Start with bold statement about ${topic || 'your topic'}`
-            },
-            introduction: {
-                duration: '15-45 seconds',
-                content: 'Introduce yourself and promise value'
-            },
+            hook: { duration: '0-15 seconds', content: `Start with bold statement about ${topic || 'your topic'}` },
+            introduction: { duration: '15-45 seconds', content: 'Introduce yourself and promise value' },
             mainContent: {
                 duration: '45 seconds - 8 minutes',
                 sections: [
@@ -627,10 +816,7 @@ app.post('/api/generate/script', async (req, res) => {
                     { title: 'Tips', content: 'Share pro strategies' }
                 ]
             },
-            callToAction: {
-                duration: '30 seconds',
-                content: 'Subscribe and engage'
-            }
+            callToAction: { duration: '30 seconds', content: 'Subscribe and engage' }
         };
         
         return res.json({
@@ -651,18 +837,24 @@ app.post('/api/generate/script', async (req, res) => {
 // SEO Generator endpoint
 app.post('/api/generate/seo', async (req, res) => {
     try {
-        const { title, description } = req.body;
+        const { topic } = req.body;
+
+        if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'demo-key') {
+            const completion = await openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [{
+                    role: 'user',
+                    content: `Create a YouTube optimization pack for: "${topic || 'video topic'}". Provide: 1) 5 title variations, 2) SEO description (150 words), 3) 15 relevant tags, 4) 5 chapter timestamps. Format as JSON.`
+                }],
+                temperature: 0.7
+            });
+            
+            return res.json({ success: true, pack: completion.choices[0].message.content, source: 'AI' });
+        }
         
-        const tags = [
-            'youtube', '2024', 'tutorial', 'howto', 'tips',
-            ...(title ? title.toLowerCase().split(' ').filter(w => w.length > 3) : [])
-        ];
-        
-        return res.json({
-            success: true,
-            tags: tags,
-            optimizedDescription: description || 'Add your description'
-        });
+        // Fallback
+        const tags = ['youtube', '2024', 'tutorial', 'howto', 'tips', ...(topic ? topic.toLowerCase().split(' ').filter(w => w.length > 3) : [])];
+        return res.json({ success: true, tags, optimizedDescription: 'Add OPENAI_API_KEY for AI-generated content', source: 'fallback' });
         
     } catch (error) {
         console.error('SEO error:', error);

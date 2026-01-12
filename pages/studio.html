@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Studio - drunk30.buzz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0" />
+  <title>AI Studio - drunk30.buzz | Mobile YouTube Creator Studio</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-touch-callout: none; }
     :root {
       --neon-pink: #ff006e;
       --electric-orange: #fb5607;
@@ -14,24 +14,308 @@
       --void-black: #050505;
       --smoke-white: #f7f7f7;
       --cyber-blue: #5a7fd1;
+      --danger-red: #ff4757;
+      --success-green: #2ed573;
     }
-    body { background: var(--void-black); color: var(--smoke-white); font-family: 'Space Mono', monospace; }
-    .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
-    header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 1rem; border-bottom: 2px solid var(--neon-pink); box-shadow: 0 2px 20px rgba(255,0,110,.5); }
-    .logo { font-family: 'Bebas Neue', cursive; font-size: 2rem; letter-spacing: 2px; }
-    .logo .thirty { background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange), var(--laser-yellow)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
-    .card { background: rgba(255,0,110,0.06); border: 2px solid var(--neon-pink); border-radius: 10px; padding: 1.25rem; transition: all .3s; }
-    .card:hover { transform: translateY(-4px); box-shadow: 0 10px 30px rgba(255,0,110,.4); border-color: var(--electric-orange); }
-    .card h3 { font-family: 'Bebas Neue', cursive; font-size: 1.8rem; color: var(--electric-orange); margin-bottom: .5rem; }
-    .card p { opacity: .9; margin-bottom: 1rem; }
-    .actions { display: flex; gap: .75rem; flex-wrap: wrap; }
-    button { padding: .75rem 1rem; border-radius: 6px; border: 2px solid var(--neon-pink); background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange)); color: var(--void-black); font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: all .3s; }
-    button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,0,110,.6); }
-    .output { margin-top: 1rem; background: rgba(90,127,209,.08); border: 2px solid var(--cyber-blue); border-radius: 8px; padding: .75rem; min-height: 80px; white-space: pre-wrap; }
-    .nav { margin-left: 1rem; }
-    .nav a { color: var(--smoke-white); text-decoration: none; margin-left: 1rem; border-bottom: 2px solid transparent; padding-bottom: .25rem; }
+    html, body { width: 100%; height: 100%; overflow-x: hidden; }
+    body { 
+      background: var(--void-black); 
+      color: var(--smoke-white); 
+      font-family: 'Space Mono', monospace;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { 
+      max-width: 100%;
+      min-height: 100vh;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+    @media (min-width: 768px) {
+      .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    }
+    header { 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      padding-bottom: 1rem; 
+      border-bottom: 2px solid var(--neon-pink); 
+      box-shadow: 0 2px 20px rgba(255,0,110,.5);
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .logo { 
+      font-family: 'Bebas Neue', cursive; 
+      font-size: 1.5rem;
+      letter-spacing: 2px; 
+    }
+    @media (min-width: 768px) {
+      .logo { font-size: 2rem; }
+    }
+    .logo .thirty { 
+      background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange), var(--laser-yellow)); 
+      -webkit-background-clip: text; 
+      background-clip: text; 
+      -webkit-text-fill-color: transparent; 
+    }
+    .nav { 
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      font-size: 0.75rem;
+    }
+    @media (min-width: 768px) {
+      .nav { gap: 1rem; font-size: 1rem; }
+    }
+    .nav a { 
+      color: var(--smoke-white); 
+      text-decoration: none; 
+      border-bottom: 2px solid transparent; 
+      padding: 0.25rem;
+      transition: all 0.2s;
+    }
     .nav a:hover { color: var(--neon-pink); border-color: var(--neon-pink); }
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+      margin-bottom: 1.5rem;
+      overflow-x: auto;
+      padding: 0.5rem 0;
+      scroll-behavior: smooth;
+    }
+    .tab-btn {
+      flex: 0 0 auto;
+      padding: 0.6rem 1rem;
+      border: 2px solid var(--cyber-blue);
+      background: rgba(90,127,209,0.1);
+      color: var(--smoke-white);
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Oswald', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 0.75rem;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    @media (min-width: 768px) {
+      .tab-btn { font-size: 0.9rem; }
+    }
+    .tab-btn.active {
+      background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange));
+      border-color: var(--laser-yellow);
+      color: var(--void-black);
+      box-shadow: 0 4px 16px rgba(255,0,110,.4);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .grid { 
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    @media (min-width: 768px) {
+      .grid { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
+        gap: 1.5rem; 
+      }
+    }
+    .card { 
+      background: rgba(255,0,110,0.06); 
+      border: 2px solid var(--neon-pink); 
+      border-radius: 10px; 
+      padding: 1.25rem; 
+      transition: all .3s;
+      display: flex;
+      flex-direction: column;
+    }
+    .card:hover { 
+      transform: translateY(-4px); 
+      box-shadow: 0 10px 30px rgba(255,0,110,.4); 
+      border-color: var(--electric-orange); 
+    }
+    .card h3 { 
+      font-family: 'Bebas Neue', cursive; 
+      font-size: 1.4rem;
+      color: var(--electric-orange); 
+      margin-bottom: .5rem; 
+    }
+    @media (min-width: 768px) {
+      .card h3 { font-size: 1.8rem; }
+    }
+    .card p { opacity: .9; margin-bottom: 1rem; font-size: 0.9rem; }
+    .card-body { flex: 1; display: flex; flex-direction: column; }
+    .input-group {
+      display: flex;
+      gap: 0.75rem;
+      flex-direction: column;
+      margin-bottom: 1rem;
+    }
+    @media (min-width: 768px) {
+      .input-group { flex-direction: row; }
+    }
+    input, textarea { 
+      flex: 1;
+      padding: 0.75rem;
+      border: 2px solid var(--neon-pink);
+      background: rgba(255,0,110,.08);
+      color: var(--smoke-white);
+      border-radius: 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 1rem;
+      transition: border 0.2s;
+    }
+    input:focus, textarea:focus { 
+      outline: none;
+      border-color: var(--electric-orange);
+      box-shadow: 0 0 12px rgba(251,86,7,.3);
+    }
+    textarea { resize: vertical; min-height: 80px; }
+    .actions { 
+      display: flex; 
+      gap: 0.75rem; 
+      flex-wrap: wrap;
+    }
+    button { 
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      border: 2px solid var(--neon-pink);
+      background: linear-gradient(45deg, var(--neon-pink), var(--electric-orange));
+      color: var(--void-black);
+      font-family: 'Oswald', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all .3s;
+      font-size: 0.85rem;
+      font-weight: bold;
+      flex: 1;
+      min-height: 44px;
+    }
+    @media (min-width: 768px) {
+      button { font-size: 1rem; flex: auto; }
+    }
+    button:hover { 
+      transform: translateY(-2px); 
+      box-shadow: 0 8px 24px rgba(255,0,110,.6); 
+    }
+    button:active { transform: translateY(0); }
+    button.secondary {
+      background: rgba(90,127,209,0.2);
+      border-color: var(--cyber-blue);
+      color: var(--cyber-blue);
+    }
+    button.secondary:hover {
+      background: rgba(90,127,209,0.4);
+      box-shadow: 0 8px 24px rgba(90,127,209,.3);
+    }
+    button.danger {
+      background: linear-gradient(45deg, var(--danger-red), #ff6348);
+      border-color: var(--danger-red);
+    }
+    button.danger:hover {
+      box-shadow: 0 8px 24px rgba(255,71,87,.6);
+    }
+    button.success {
+      background: linear-gradient(45deg, var(--success-green), #1dd1a1);
+      border-color: var(--success-green);
+      color: var(--void-black);
+    }
+    button.success:hover {
+      box-shadow: 0 8px 24px rgba(46,213,115,.6);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .output { 
+      margin-top: 1rem; 
+      background: rgba(90,127,209,.08); 
+      border: 2px solid var(--cyber-blue); 
+      border-radius: 8px; 
+      padding: 1rem;
+      min-height: 60px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    @media (min-width: 768px) {
+      .output { font-size: 0.95rem; max-height: 500px; }
+    }
+    .output-list {
+      list-style: none;
+    }
+    .output-list li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(90,127,209,0.3);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .output-list li:last-child { border-bottom: none; }
+    .output-list li::before {
+      content: "▹";
+      color: var(--neon-pink);
+      font-size: 1.2rem;
+      flex: 0 0 auto;
+    }
+    .loading { 
+      display: inline-block; 
+      animation: pulse 1.5s ease-in-out infinite; 
+      color: var(--neon-pink);
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    .copyable {
+      background: rgba(255,255,255,0.05);
+      border-left: 3px solid var(--laser-yellow);
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border-radius: 4px;
+      cursor: copy;
+      transition: all 0.2s;
+    }
+    .copyable:hover {
+      background: rgba(255,255,255,0.1);
+      box-shadow: 0 4px 12px rgba(255,190,11,.2);
+    }
+    .copyable.copied {
+      border-left-color: var(--success-green);
+      background: rgba(46,213,115,0.1);
+    }
+    .stat-box {
+      background: rgba(255,0,110,0.1);
+      border: 1px solid var(--neon-pink);
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 1.4rem;
+      color: var(--laser-yellow);
+      font-weight: bold;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      text-transform: uppercase;
+    }
+    footer {
+      margin-top: auto;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      text-align: center;
+      font-size: 0.8rem;
+      opacity: 0.6;
+    }
   </style>
 </head>
 <body>
@@ -46,57 +330,362 @@
       </nav>
     </header>
 
-    <div class="grid">
-      <section class="card">
-        <h3>Ideas</h3>
-        <p>Generate 10 video ideas for your niche.</p>
-        <div class="actions">
-          <input id="niche" placeholder="Your niche (e.g., sobriety)" style="flex:1; padding:.6rem; border:2px solid var(--neon-pink); background:rgba(255,0,110,.08); color:var(--smoke-white); border-radius:6px;" />
-          <button onclick="generateIdeas()">Generate</button>
-        </div>
-        <div id="ideas" class="output"></div>
-      </section>
-
-      <section class="card">
-        <h3>Script</h3>
-        <p>Create an episode script from a selected idea.</p>
-        <div class="actions">
-          <input id="topic" placeholder="Topic or idea" style="flex:1; padding:.6rem; border:2px solid var(--neon-pink); background:rgba(255,0,110,.08); color:var(--smoke-white); border-radius:6px;" />
-          <button onclick="generateScript()">Generate</button>
-        </div>
-        <div id="script" class="output"></div>
-      </section>
-
-      <section class="card">
-        <h3>YouTube Pack</h3>
-        <p>Titles, description, tags, and chapters.</p>
-        <div class="actions">
-          <input id="ytTopic" placeholder="Episode topic" style="flex:1; padding:.6rem; border:2px solid var(--neon-pink); background:rgba(255,0,110,.08); color:var(--smoke-white); border-radius:6px;" />
-          <button onclick="generateYouTubePack()">Generate</button>
-        </div>
-        <div id="ytpack" class="output"></div>
-      </section>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('ideas')">💡 Ideas</button>
+      <button class="tab-btn" onclick="switchTab('script')">📝 Script</button>
+      <button class="tab-btn" onclick="switchTab('youtube')">🚀 YouTube Hacks</button>
+      <button class="tab-btn" onclick="switchTab('seo')">🔍 SEO Pack</button>
+      <button class="tab-btn" onclick="switchTab('backgrounds')">🎨 Backgrounds</button>
+      <button class="tab-btn" onclick="switchTab('record')">🎥 Record</button>
     </div>
+
+    <!-- Ideas Tab -->
+    <div id="ideas" class="tab-content active">
+      <div class="grid">
+        <section class="card">
+          <h3>🎯 Video Ideas</h3>
+          <p>Generate viral video concepts for your niche. AI-powered + trending topics.</p>
+          <div class="card-body">
+            <div class="input-group">
+              <input id="niche" placeholder="Your niche (e.g., sobriety, fitness, tech)" />
+              <button onclick="generateIdeas()">Generate Ideas</button>
+            </div>
+            <div id="ideas-output" class="output">Ideas will appear here...</div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Script Tab -->
+    <div id="script" class="tab-content">
+      <div class="grid">
+        <section class="card">
+          <h3>📝 Script Generator</h3>
+          <p>Write engaging video scripts optimized for YouTube retention.</p>
+          <div class="card-body">
+            <div class="input-group">
+              <input id="topic" placeholder="Topic or video idea" />
+              <button onclick="generateScript()">Write Script</button>
+            </div>
+            <div id="script-output" class="output">Script will appear here...</div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- YouTube Hacks Tab -->
+    <div id="youtube" class="tab-content">
+      <div class="grid">
+        <section class="card">
+          <h3>🚀 YouTube Growth Hacks</h3>
+          <p>Trending keywords, hashtags, optimal posting times, and viral hooks.</p>
+          <div class="card-body">
+            <div class="input-group">
+              <input id="hackTopic" placeholder="Your content topic" />
+              <button onclick="generateYouTubeHacks()">Get Hacks</button>
+            </div>
+            <div id="hacks-output" class="output">Hacks will appear here...</div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- SEO Pack Tab -->
+    <div id="seo" class="tab-content">
+      <div class="grid">
+        <section class="card">
+          <h3>🔍 YouTube SEO Pack</h3>
+          <p>Optimized titles, descriptions, tags, and chapters. Ready to copy.</p>
+          <div class="card-body">
+            <div class="input-group">
+              <input id="seoTopic" placeholder="Episode topic" />
+              <button onclick="generateSEO()">Generate Pack</button>
+            </div>
+            <div id="seo-output" class="output">SEO pack will appear here...</div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Backgrounds Tab -->
+    <div id="backgrounds" class="tab-content">
+      <div class="grid">
+        <section class="card">
+          <h3>🎨 Background Generator</h3>
+          <p>AI images, music, and animations for intros and outros.</p>
+          <div class="card-body">
+            <div class="input-group">
+              <input id="bgTopic" placeholder="Describe the vibe (e.g., neon cyberpunk, nature calm)" />
+              <button onclick="generateBackgrounds()">Generate Backgrounds</button>
+            </div>
+            <div id="bg-output" class="output">Background suggestions will appear here...</div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Recording Tab -->
+    <div id="record" class="tab-content">
+      <div class="grid">
+        <section class="card">
+          <h3>🎥 Quick Record</h3>
+          <p>Record directly from your phone. Auto-upload to YouTube (coming soon).</p>
+          <div class="card-body">
+            <div class="input-group">
+              <input id="recordTitle" placeholder="Video title" />
+            </div>
+            <div class="actions">
+              <button class="secondary" onclick="startRecording()">🔴 Start Recording</button>
+              <button class="secondary" onclick="stopRecording()">⏹ Stop</button>
+              <button class="success" onclick="publishRecording()">📤 Publish</button>
+            </div>
+            <div id="record-output" class="output">
+              <p>Recording status: Ready</p>
+              <p style="font-size: 0.8rem; opacity: 0.7;">Press Start to begin recording from your camera.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <footer>
+      <p>drunk30.buzz AI Studio | Mobile YouTube Creator Toolkit</p>
+      <p style="margin-top: 0.5rem;">Built for creators on the go. S25 Ultra optimized. 🚀</p>
+    </footer>
   </div>
 
   <script>
-    async function generateIdeas(){
-      const niche = document.getElementById('niche').value || 'sobriety';
-      const res = await fetch('/api/generate/ideas', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ niche }) });
-      const data = await res.json();
-      document.getElementById('ideas').textContent = JSON.stringify(data, null, 2);
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(tab).classList.add('active');
+      event.target.classList.add('active');
     }
-    async function generateScript(){
-      const topic = document.getElementById('topic').value || 'sobriety milestones';
-      const res = await fetch('/api/generate/script', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ topic }) });
-      const data = await res.json();
-      document.getElementById('script').textContent = JSON.stringify(data, null, 2);
+
+    function formatOutput(items, type = 'list') {
+      if (type === 'list' && Array.isArray(items)) {
+        const ul = document.createElement('ul');
+        ul.className = 'output-list';
+        items.forEach(item => {
+          const li = document.createElement('li');
+          li.textContent = item;
+          ul.appendChild(li);
+        });
+        return ul;
+      }
+      return document.createTextNode(JSON.stringify(items, null, 2));
     }
-    async function generateYouTubePack(){
-      const topic = document.getElementById('ytTopic').value || 'first 30 days sober';
-      const res = await fetch('/api/generate/seo', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ topic }) });
-      const data = await res.json();
-      document.getElementById('ytpack').textContent = JSON.stringify(data, null, 2);
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Copied to clipboard! 📋');
+      });
+    }
+
+    async function generateIdeas() {
+      const niche = document.getElementById('niche').value || 'YouTube content creation';
+      const output = document.getElementById('ideas-output');
+      output.innerHTML = '<span class="loading">⚙️ Generating ideas...</span>';
+      try {
+        const res = await fetch('/api/generate/ideas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ niche })
+        });
+        const data = await res.json();
+        if (data.ideas) {
+          output.innerHTML = '';
+          output.appendChild(formatOutput(data.ideas, 'list'));
+        } else {
+          output.textContent = 'Error generating ideas.';
+        }
+      } catch (err) {
+        output.textContent = 'Failed to generate ideas. Check your connection.';
+      }
+    }
+
+    async function generateScript() {
+      const topic = document.getElementById('topic').value || 'personal journey';
+      const output = document.getElementById('script-output');
+      output.innerHTML = '<span class="loading">📝 Writing script...</span>';
+      try {
+        const res = await fetch('/api/generate/script', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic })
+        });
+        const data = await res.json();
+        output.innerHTML = '';
+        if (data.script) {
+          const pre = document.createElement('pre');
+          pre.textContent = typeof data.script === 'string' ? data.script : JSON.stringify(data.script, null, 2);
+          pre.style.whiteSpace = 'pre-wrap';
+          pre.style.wordWrap = 'break-word';
+          output.appendChild(pre);
+        } else if (data.outline) {
+          output.textContent = JSON.stringify(data.outline, null, 2);
+        }
+      } catch (err) {
+        output.textContent = 'Failed to generate script.';
+      }
+    }
+
+    async function generateYouTubeHacks() {
+      const topic = document.getElementById('hackTopic').value || 'YouTube growth';
+      const output = document.getElementById('hacks-output');
+      output.innerHTML = '<span class="loading">🚀 Fetching hacks...</span>';
+      try {
+        const res = await fetch('/api/generate/youtube-hacks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic })
+        });
+        const data = await res.json();
+        output.innerHTML = '';
+        
+        const container = document.createElement('div');
+        
+        if (data.trendingKeywords) {
+          const section = document.createElement('div');
+          section.innerHTML = '<strong style="color: var(--laser-yellow);">📈 Trending Keywords:</strong>';
+          const ul = document.createElement('ul');
+          ul.className = 'output-list';
+          data.trendingKeywords.slice(0, 5).forEach(kw => {
+            const li = document.createElement('li');
+            li.innerHTML = `<code>${kw}</code> <small style="opacity: 0.6;">(click to copy)</small>`;
+            li.style.cursor = 'pointer';
+            li.onclick = () => copyToClipboard(kw);
+            ul.appendChild(li);
+          });
+          section.appendChild(ul);
+          container.appendChild(section);
+        }
+        
+        if (data.hashtags) {
+          const section = document.createElement('div');
+          section.style.marginTop = '1rem';
+          section.innerHTML = '<strong style="color: var(--laser-yellow);">🏷️ Hashtags:</strong>';
+          const hashtags = data.hashtags.join(' ');
+          const copyBox = document.createElement('div');
+          copyBox.className = 'copyable';
+          copyBox.textContent = hashtags;
+          copyBox.onclick = () => copyToClipboard(hashtags);
+          section.appendChild(copyBox);
+          container.appendChild(section);
+        }
+
+        if (data.bestTimes) {
+          const section = document.createElement('div');
+          section.style.marginTop = '1rem';
+          section.innerHTML = '<strong style="color: var(--laser-yellow);">⏰ Best Times to Post:</strong>';
+          const ul = document.createElement('ul');
+          ul.className = 'output-list';
+          data.bestTimes.forEach(time => {
+            const li = document.createElement('li');
+            li.textContent = time;
+            ul.appendChild(li);
+          });
+          section.appendChild(ul);
+          container.appendChild(section);
+        }
+
+        output.appendChild(container);
+      } catch (err) {
+        output.textContent = 'Failed to fetch YouTube hacks.';
+      }
+    }
+
+    async function generateSEO() {
+      const topic = document.getElementById('seoTopic').value || 'my awesome video';
+      const output = document.getElementById('seo-output');
+      output.innerHTML = '<span class="loading">🔍 Optimizing...</span>';
+      try {
+        const res = await fetch('/api/generate/seo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic })
+        });
+        const data = await res.json();
+        output.innerHTML = '';
+        if (typeof data.pack === 'string') {
+          const pre = document.createElement('pre');
+          pre.textContent = data.pack;
+          pre.style.whiteSpace = 'pre-wrap';
+          pre.style.wordWrap = 'break-word';
+          pre.style.fontSize = '0.8rem';
+          output.appendChild(pre);
+        } else {
+          output.textContent = JSON.stringify(data, null, 2);
+        }
+      } catch (err) {
+        output.textContent = 'Failed to generate SEO pack.';
+      }
+    }
+
+    async function generateBackgrounds() {
+      const topic = document.getElementById('bgTopic').value || 'neon cyberpunk';
+      const output = document.getElementById('bg-output');
+      output.innerHTML = '<span class="loading">🎨 Searching for assets...</span>';
+      try {
+        const res = await fetch('/api/generate/backgrounds', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic })
+        });
+        const data = await res.json();
+        output.innerHTML = '';
+        
+        const container = document.createElement('div');
+        
+        if (data.images && data.images.length > 0) {
+          const section = document.createElement('div');
+          section.innerHTML = '<strong style="color: var(--laser-yellow);">🖼️ Background Images:</strong>';
+          const ul = document.createElement('ul');
+          ul.className = 'output-list';
+          data.images.slice(0, 3).forEach(img => {
+            const li = document.createElement('li');
+            li.innerHTML = `<a href="${img.url}" target="_blank" style="color: var(--cyber-blue); text-decoration: underline;">${img.title || 'Image'}</a>`;
+            ul.appendChild(li);
+          });
+          section.appendChild(ul);
+          container.appendChild(section);
+        }
+
+        if (data.music && data.music.length > 0) {
+          const section = document.createElement('div');
+          section.style.marginTop = '1rem';
+          section.innerHTML = '<strong style="color: var(--laser-yellow);">🎵 Music:</strong>';
+          const ul = document.createElement('ul');
+          ul.className = 'output-list';
+          data.music.slice(0, 3).forEach(track => {
+            const li = document.createElement('li');
+            li.innerHTML = `<a href="${track.url}" target="_blank" style="color: var(--cyber-blue); text-decoration: underline;">${track.title || 'Music'}</a>`;
+            ul.appendChild(li);
+          });
+          section.appendChild(ul);
+          container.appendChild(section);
+        }
+
+        output.appendChild(container);
+      } catch (err) {
+        output.textContent = 'Failed to generate backgrounds.';
+      }
+    }
+
+    function startRecording() {
+      const output = document.getElementById('record-output');
+      output.innerHTML = '<span class="loading">🔴 Recording...</span><p style="margin-top: 1rem; color: var(--danger-red);">Recording feature coming soon!</p>';
+    }
+
+    function stopRecording() {
+      const output = document.getElementById('record-output');
+      output.innerHTML = '<p>Recording stopped. Ready to publish.</p>';
+    }
+
+    function publishRecording() {
+      const title = document.getElementById('recordTitle').value || 'My Video';
+      const output = document.getElementById('record-output');
+      output.innerHTML = `<p>Publishing: "${title}"...</p><p style="color: var(--laser-yellow); margin-top: 1rem;">This will integrate with YouTube API. Coming soon! 🚀</p>`;
     }
   </script>
 </body>
