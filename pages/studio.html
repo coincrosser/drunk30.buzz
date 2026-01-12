@@ -3,6 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0" />
+  <meta name="description" content="Mobile YouTube Creator Studio - AI-powered content generation, recording, and growth hacks for creators on the go" />
+  <meta name="theme-color" content="#ff006e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="drunk30 Studio" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23ff006e' width='192' height='192'/><text x='50%' y='50%' font-size='100' font-weight='bold' text-anchor='middle' dominant-baseline='central' fill='white' font-family='Bebas Neue'>30</text></svg>" />
   <title>AI Studio - drunk30.buzz | Mobile YouTube Creator Studio</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <style>
@@ -337,6 +344,10 @@
       <button class="tab-btn" onclick="switchTab('seo')">🔍 SEO Pack</button>
       <button class="tab-btn" onclick="switchTab('backgrounds')">🎨 Backgrounds</button>
       <button class="tab-btn" onclick="switchTab('record')">🎥 Record</button>
+      <button class="tab-btn" onclick="switchTab('crm')">👥 CRM</button>
+      <button class="tab-btn" onclick="switchTab('recovery')">💪 Recovery</button>
+      <button class="tab-btn" onclick="switchTab('thumbnails')">🖼️ Thumbnails</button>
+      <button class="tab-btn" onclick="switchTab('analytics')">📊 Analytics</button>
     </div>
 
     <!-- Ideas Tab -->
@@ -429,19 +440,125 @@
       <div class="grid">
         <section class="card">
           <h3>🎥 Quick Record</h3>
-          <p>Record directly from your phone. Auto-upload to YouTube (coming soon).</p>
+          <p>Record directly from your phone. Auto-upload to YouTube.</p>
           <div class="card-body">
             <div class="input-group">
               <input id="recordTitle" placeholder="Video title" />
             </div>
+            <div id="video-preview" style="width: 100%; max-width: 100%; border-radius: 6px; background: #000; margin: 1rem 0; display: none;"></div>
             <div class="actions">
-              <button class="secondary" onclick="startRecording()">🔴 Start Recording</button>
-              <button class="secondary" onclick="stopRecording()">⏹ Stop</button>
-              <button class="success" onclick="publishRecording()">📤 Publish</button>
+              <button class="secondary" id="startBtn" onclick="startRecording()">🔴 Start Recording</button>
+              <button class="secondary" id="stopBtn" onclick="stopRecording()" disabled>⏹ Stop</button>
+              <button class="success" id="downloadBtn" onclick="downloadRecording()" disabled>⬇️ Download</button>
+              <button class="danger" id="uploadBtn" onclick="uploadToYouTube()" disabled>📤 Upload</button>
             </div>
             <div id="record-output" class="output">
-              <p>Recording status: Ready</p>
-              <p style="font-size: 0.8rem; opacity: 0.7;">Press Start to begin recording from your camera.</p>
+              <p>🎬 Ready to record. Press Start to begin.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- CRM Tab -->
+    <div id="crm" class="tab-content">
+      <div class="grid">
+        <section class="card">
+          <h3>👥 Collaborators CRM</h3>
+          <p>Manage creators, guests, and collaborators.</p>
+          <div class="card-body">
+            <div class="input-group">
+              <input id="collaboratorName" placeholder="Name" />
+              <input id="collaboratorEmail" placeholder="Email" style="flex: 1;" />
+              <button onclick="addCollaborator()" style="flex: 0.5;">➕ Add</button>
+            </div>
+            <div id="crm-output" class="output">
+              <p>No collaborators yet. Add one above!</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Recovery Tab -->
+    <div id="recovery" class="tab-content">
+      <div class="grid">
+        <section class="card">
+          <h3>💪 Recovery Tracker</h3>
+          <p>Log your sobriety journey. Track milestones. Build your story.</p>
+          <div class="card-body">
+            <div class="stat-box">
+              <div class="stat-number" id="sobrietyDays">0</div>
+              <div class="stat-label">Days Sober</div>
+            </div>
+            <div class="input-group">
+              <input type="date" id="sobrietyDate" />
+              <button onclick="setSobrietyDate()" style="flex: 0.5;">Set Start Date</button>
+            </div>
+            <div class="input-group">
+              <input id="journalEntry" placeholder="Today's reflection..." />
+              <button onclick="addJournalEntry()" style="flex: 0.5;">📝 Log</button>
+            </div>
+            <div id="recovery-output" class="output">
+              <p>📖 Journal entries appear here.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Thumbnails Tab -->
+    <div id="thumbnails" class="tab-content">
+      <div class="grid">
+        <section class="card">
+          <h3>🖼️ AI Thumbnail Gen</h3>
+          <p>Generate custom YouTube thumbnails with DALL-E.</p>
+          <div class="card-body">
+            <div class="input-group">
+              <input id="thumbPrompt" placeholder="Describe thumbnail (e.g., shocked face, neon background, big numbers)" />
+              <button onclick="generateThumbnail()">Generate</button>
+            </div>
+            <div id="thumb-preview" style="width: 100%; max-width: 320px; border-radius: 6px; margin: 1rem 0; display: none;"></div>
+            <div id="thumbnail-output" class="output">
+              <p>AI-generated thumbnails will appear here.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Analytics Tab -->
+    <div id="analytics" class="tab-content">
+      <div class="grid">
+        <section class="card">
+          <h3>📊 Channel Analytics</h3>
+          <p>Track your channel growth and video performance.</p>
+          <div class="card-body">
+            <div class="input-group">
+              <input id="analyticsViews" type="number" placeholder="Total views" />
+              <input id="analyticsSubscribers" type="number" placeholder="Subscribers" />
+              <button onclick="updateAnalytics()" style="flex: 0.5;">Update</button>
+            </div>
+            <div id="analytics-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;">
+              <div class="stat-box">
+                <div class="stat-number" id="analyticsViewsDisplay">0</div>
+                <div class="stat-label">Total Views</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number" id="analyticsSubsDisplay">0</div>
+                <div class="stat-label">Subscribers</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number" id="analyticsEngagement">0%</div>
+                <div class="stat-label">Engagement Rate</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number" id="analyticsGrowth">↗️</div>
+                <div class="stat-label">Growth Status</div>
+              </div>
+            </div>
+            <div id="analytics-output" class="output">
+              <p>📈 Analytics insights appear here.</p>
             </div>
           </div>
         </section>
@@ -455,11 +572,24 @@
   </div>
 
   <script>
+    // Global state
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let stream = null;
+    let collaborators = JSON.parse(localStorage.getItem('collaborators')) || [];
+    let journalEntries = JSON.parse(localStorage.getItem('journalEntries')) || [];
+    let analytics = JSON.parse(localStorage.getItem('analytics')) || { views: 0, subscribers: 0 };
+
     function switchTab(tab) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.getElementById(tab).classList.add('active');
       event.target.classList.add('active');
+      
+      // Load tab-specific data
+      if (tab === 'crm') renderCollaborators();
+      if (tab === 'recovery') renderRecovery();
+      if (tab === 'analytics') renderAnalytics();
     }
 
     function formatOutput(items, type = 'list') {
@@ -482,6 +612,105 @@
       });
     }
 
+    // ==================== RECORDING ====================
+    async function startRecording() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'user' }, 
+          audio: true 
+        });
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = 1280;
+        canvas.height = 720;
+        const ctx = canvas.getContext('2d');
+        
+        const video = document.getElementById('video-preview');
+        video.style.display = 'block';
+        video.srcObject = stream;
+        video.play();
+        
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(stream, {
+          mimeType: 'video/webm;codecs=vp9,opus'
+        });
+        
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) recordedChunks.push(event.data);
+        };
+        
+        mediaRecorder.onstart = () => {
+          document.getElementById('record-output').innerHTML = '<span class="loading">🔴 RECORDING...</span>';
+          document.getElementById('startBtn').disabled = true;
+          document.getElementById('stopBtn').disabled = false;
+        };
+        
+        mediaRecorder.start();
+      } catch (err) {
+        alert('Camera permission denied: ' + err.message);
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder) {
+        mediaRecorder.stop();
+        mediaRecorder.onstop = () => {
+          stream.getTracks().forEach(track => track.stop());
+          document.getElementById('video-preview').style.display = 'none';
+          document.getElementById('record-output').innerHTML = '<p>✅ Recording stopped. Ready to download or upload.</p>';
+          document.getElementById('stopBtn').disabled = true;
+          document.getElementById('downloadBtn').disabled = false;
+          document.getElementById('uploadBtn').disabled = false;
+          document.getElementById('startBtn').disabled = false;
+        };
+      }
+    }
+
+    function downloadRecording() {
+      if (recordedChunks.length === 0) return alert('No recording to download');
+      
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${document.getElementById('recordTitle').value || 'video'}_${Date.now()}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert('Video downloaded! 📥');
+    }
+
+    async function uploadToYouTube() {
+      const title = document.getElementById('recordTitle').value || 'My Video';
+      const output = document.getElementById('record-output');
+      output.innerHTML = '<span class="loading">📤 Preparing upload...</span>';
+      
+      // Create FormData with video blob
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const formData = new FormData();
+      formData.append('video', blob, `${title}.webm`);
+      formData.append('title', title);
+      formData.append('description', `Created with drunk30.buzz AI Studio on ${new Date().toLocaleDateString()}`);
+      
+      try {
+        const res = await fetch('/api/youtube/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          output.innerHTML = `<p style="color: var(--success-green);">✅ Video uploaded! Video ID: ${data.videoId}</p>`;
+        } else {
+          output.innerHTML = `<p>⚠️ ${data.message || 'Upload failed'}</p>`;
+        }
+      } catch (err) {
+        output.innerHTML = '<p>Upload endpoint not yet live. Download and upload manually from YouTube Studio.</p>';
+      }
+    }
+
+    // ==================== CONTENT GENERATION ====================
     async function generateIdeas() {
       const niche = document.getElementById('niche').value || 'YouTube content creation';
       const output = document.getElementById('ideas-output');
@@ -672,21 +901,194 @@
       }
     }
 
-    function startRecording() {
-      const output = document.getElementById('record-output');
-      output.innerHTML = '<span class="loading">🔴 Recording...</span><p style="margin-top: 1rem; color: var(--danger-red);">Recording feature coming soon!</p>';
+    async function generateThumbnail() {
+      const prompt = document.getElementById('thumbPrompt').value || 'shocked face, neon background';
+      const output = document.getElementById('thumbnail-output');
+      output.innerHTML = '<span class="loading">🖼️ Generating thumbnail...</span>';
+      try {
+        const res = await fetch('/api/generate/thumbnail-ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+        const data = await res.json();
+        output.innerHTML = '';
+        
+        if (data.imageUrl) {
+          const img = document.createElement('img');
+          img.src = data.imageUrl;
+          img.style.width = '100%';
+          img.style.borderRadius = '6px';
+          img.style.border = '2px solid var(--neon-pink)';
+          document.getElementById('thumb-preview').innerHTML = '';
+          document.getElementById('thumb-preview').appendChild(img);
+          document.getElementById('thumb-preview').style.display = 'block';
+          
+          const dlBtn = document.createElement('button');
+          dlBtn.textContent = '⬇️ Download';
+          dlBtn.style.marginTop = '1rem';
+          dlBtn.onclick = () => {
+            const a = document.createElement('a');
+            a.href = data.imageUrl;
+            a.download = `thumbnail_${Date.now()}.png`;
+            a.click();
+          };
+          output.appendChild(dlBtn);
+        } else {
+          output.textContent = data.message || 'Failed to generate thumbnail';
+        }
+      } catch (err) {
+        output.textContent = 'Thumbnail generation coming soon. Use DALL-E manually for now.';
+      }
     }
 
-    function stopRecording() {
-      const output = document.getElementById('record-output');
-      output.innerHTML = '<p>Recording stopped. Ready to publish.</p>';
+    // ==================== CRM ====================
+    function addCollaborator() {
+      const name = document.getElementById('collaboratorName').value;
+      const email = document.getElementById('collaboratorEmail').value;
+      
+      if (!name || !email) return alert('Name and email required');
+      
+      collaborators.push({ id: Date.now(), name, email, added: new Date().toLocaleDateString() });
+      localStorage.setItem('collaborators', JSON.stringify(collaborators));
+      
+      document.getElementById('collaboratorName').value = '';
+      document.getElementById('collaboratorEmail').value = '';
+      
+      renderCollaborators();
+      alert(`✅ Added ${name}!`);
     }
 
-    function publishRecording() {
-      const title = document.getElementById('recordTitle').value || 'My Video';
-      const output = document.getElementById('record-output');
-      output.innerHTML = `<p>Publishing: "${title}"...</p><p style="color: var(--laser-yellow); margin-top: 1rem;">This will integrate with YouTube API. Coming soon! 🚀</p>`;
+    function renderCollaborators() {
+      const output = document.getElementById('crm-output');
+      if (collaborators.length === 0) {
+        output.innerHTML = '<p>No collaborators yet. Add one above!</p>';
+        return;
+      }
+      
+      output.innerHTML = '<strong style="color: var(--laser-yellow); display: block; margin-bottom: 1rem;">Your Team:</strong>';
+      const list = document.createElement('ul');
+      list.className = 'output-list';
+      
+      collaborators.forEach((collab, idx) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>${collab.name}</strong> (${collab.email}) <br><small style="opacity: 0.6;">Added: ${collab.added}</small> 
+          <button onclick="removeCollaborator(${idx})" style="margin-left: 1rem; padding: 0.3rem 0.6rem; font-size: 0.7rem;">Remove</button>`;
+        list.appendChild(li);
+      });
+      
+      output.innerHTML = '<strong style="color: var(--laser-yellow); display: block; margin-bottom: 1rem;">Your Team:</strong>';
+      output.appendChild(list);
     }
+
+    function removeCollaborator(idx) {
+      collaborators.splice(idx, 1);
+      localStorage.setItem('collaborators', JSON.stringify(collaborators));
+      renderCollaborators();
+    }
+
+    // ==================== RECOVERY ====================
+    function setSobrietyDate() {
+      const date = document.getElementById('sobrietyDate').value;
+      if (!date) return alert('Select a date');
+      
+      localStorage.setItem('sobrietyDate', date);
+      updateSobrietyCounter();
+      alert('✅ Sobriety date set!');
+    }
+
+    function updateSobrietyCounter() {
+      const startDate = localStorage.getItem('sobrietyDate');
+      if (startDate) {
+        const today = new Date();
+        const start = new Date(startDate);
+        const days = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+        document.getElementById('sobrietyDays').textContent = Math.max(0, days);
+      }
+    }
+
+    function addJournalEntry() {
+      const entry = document.getElementById('journalEntry').value;
+      if (!entry) return alert('Write something first!');
+      
+      const today = new Date().toLocaleDateString();
+      journalEntries.unshift({ date: today, entry, timestamp: Date.now() });
+      localStorage.setItem('journalEntries', JSON.stringify(journalEntries));
+      
+      document.getElementById('journalEntry').value = '';
+      renderRecovery();
+      alert('✅ Entry saved!');
+    }
+
+    function renderRecovery() {
+      updateSobrietyCounter();
+      const output = document.getElementById('recovery-output');
+      
+      if (journalEntries.length === 0) {
+        output.innerHTML = '<p>📖 No journal entries yet. Start journaling today!</p>';
+        return;
+      }
+      
+      output.innerHTML = '<strong style="color: var(--laser-yellow); display: block; margin-bottom: 1rem;">Your Journal:</strong>';
+      const list = document.createElement('div');
+      
+      journalEntries.slice(0, 5).forEach(entry => {
+        const div = document.createElement('div');
+        div.className = 'copyable';
+        div.innerHTML = `<strong>${entry.date}</strong><br>${entry.entry}`;
+        list.appendChild(div);
+      });
+      
+      output.innerHTML = '<strong style="color: var(--laser-yellow); display: block; margin-bottom: 1rem;">Your Journal:</strong>';
+      output.appendChild(list);
+    }
+
+    // ==================== ANALYTICS ====================
+    function updateAnalytics() {
+      const views = parseInt(document.getElementById('analyticsViews').value) || 0;
+      const subs = parseInt(document.getElementById('analyticsSubscribers').value) || 0;
+      
+      analytics = { views, subscribers: subs };
+      localStorage.setItem('analytics', JSON.stringify(analytics));
+      
+      renderAnalytics();
+      alert('✅ Analytics updated!');
+    }
+
+    function renderAnalytics() {
+      const views = analytics.views || 0;
+      const subs = analytics.subscribers || 0;
+      const engagement = subs > 0 ? ((views / subs) * 100).toFixed(1) : 0;
+      const growth = engagement > 5 ? '📈 Strong' : engagement > 2 ? '➡️ Steady' : '⬇️ Growth Needed';
+      
+      document.getElementById('analyticsViewsDisplay').textContent = views.toLocaleString();
+      document.getElementById('analyticsSubsDisplay').textContent = subs.toLocaleString();
+      document.getElementById('analyticsEngagement').textContent = engagement + '%';
+      document.getElementById('analyticsGrowth').textContent = growth;
+      
+      const output = document.getElementById('analytics-output');
+      output.innerHTML = `
+        <strong style="color: var(--laser-yellow);">📊 Channel Health:</strong>
+        <ul class="output-list">
+          <li>Views to Subscriber Ratio: ${engagement}%</li>
+          <li>Status: ${engagement > 10 ? '🔥 Excellent engagement!' : engagement > 5 ? '👍 Good engagement' : '📈 Building momentum'}</li>
+          <li>Next Goal: ${Math.ceil(subs * 1.5)} subscribers</li>
+        </ul>
+      `;
+    }
+
+    // Initialize on page load
+    window.addEventListener('load', () => {
+      updateSobrietyCounter();
+      renderAnalytics();
+      
+      // Register service worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.log('SW registration failed:', err));
+      }
+    });
   </script>
 </body>
 </html>

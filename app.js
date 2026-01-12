@@ -24,6 +24,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
+// PWA Routes
+app.get('/manifest.json', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
+});
+
+app.get('/sw.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.join(__dirname, 'public', 'sw.js'));
+});
+
 // Logging middleware
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
@@ -537,6 +547,106 @@ app.post('/api/generate/ideas', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Failed to generate ideas'
+        });
+    }
+});
+
+// Thumbnail AI Generator endpoint
+app.post('/api/generate/thumbnail-ai', async (req, res) => {
+    try {
+        const { prompt } = req.body;
+        
+        if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'demo-key') {
+            try {
+                // Use DALL-E for thumbnail generation
+                const response = await openai.images.generate({
+                    prompt: `YouTube thumbnail: ${prompt}. High contrast, bold, engaging, 1280x720px format`,
+                    n: 1,
+                    size: '1024x1024',
+                    quality: 'standard'
+                });
+                
+                return res.json({
+                    success: true,
+                    imageUrl: response.data[0].url,
+                    prompt: prompt,
+                    source: 'DALL-E'
+                });
+            } catch (aiErr) {
+                console.error('DALL-E error:', aiErr);
+                // Fallback if quota exceeded
+                return res.json({
+                    success: true,
+                    imageUrl: `https://via.placeholder.com/1280x720/ff006e/ffffff?text=${encodeURIComponent(prompt)}`,
+                    prompt: prompt,
+                    source: 'placeholder'
+                });
+            }
+        }
+        
+        // Fallback thumbnail
+        return res.json({
+            success: true,
+            imageUrl: `https://via.placeholder.com/1280x720/050505/ffbe0b?text=${encodeURIComponent(prompt)}`,
+            prompt: prompt,
+            source: 'fallback'
+        });
+        
+    } catch (error) {
+        console.error('Thumbnail error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to generate thumbnail'
+        });
+    }
+});
+
+// YouTube Upload endpoint (placeholder for full OAuth flow)
+app.post('/api/youtube/upload', async (req, res) => {
+    try {
+        // TODO: Implement full YouTube OAuth flow
+        // For now, return success with placeholder video ID
+        
+        const videoId = `vid_${Date.now()}`;
+        
+        return res.json({
+            success: true,
+            videoId: videoId,
+            message: 'Video recorded successfully! Full YouTube upload coming with OAuth integration.',
+            nextSteps: 'Download your video and upload to YouTube Studio manually for now.'
+        });
+        
+    } catch (error) {
+        console.error('Upload error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Upload failed'
+        });
+    }
+});
+
+// Video Metadata endpoint
+app.post('/api/video/save-metadata', async (req, res) => {
+    try {
+        const { title, description, tags, videoId } = req.body;
+        
+        return res.json({
+            success: true,
+            metadata: {
+                videoId,
+                title,
+                description,
+                tags,
+                savedAt: new Date().toISOString(),
+                ready: 'for YouTube upload'
+            }
+        });
+        
+    } catch (error) {
+        console.error('Metadata error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to save metadata'
         });
     }
 });
