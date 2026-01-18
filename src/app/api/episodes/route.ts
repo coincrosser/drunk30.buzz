@@ -34,13 +34,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { title, description, scheduledDate } = body
+    const { title, description } = body
+
+    // Auto-create or get default user
+    await db.user.upsert({
+      where: { id: 'default-user' },
+      create: { id: 'default-user', email: 'default@drunk30.buzz' },
+      update: {},
+    })
 
     const episode = await db.episode.create({
       data: {
-        title,
+        userId: 'default-user',
+        title: title || 'Untitled',
         description,
-        scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
       },
     })
 
