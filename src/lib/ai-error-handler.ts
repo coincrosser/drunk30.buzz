@@ -41,14 +41,26 @@ export function handleAIError(error: unknown) {
     )
   }
 
-  // Check for OpenAI API errors
+  // Check for missing API keys
   const errorMessage = error instanceof Error ? error.message : String(error)
+
+  if (errorMessage.includes('GEMINI_API_KEY')) {
+    return NextResponse.json(
+      {
+        error:
+          'Gemini API key is not configured. Set GEMINI_API_KEY in environment.',
+        code: 'MISSING_API_KEY',
+        status: 'error',
+      },
+      { status: 503 }
+    )
+  }
 
   if (errorMessage.includes('OPENAI_API_KEY')) {
     return NextResponse.json(
       {
         error:
-          'OpenAI API key is not configured. Set OPENAI_API_KEY in .env.local',
+          'API key is not configured. Set GEMINI_API_KEY in environment.',
         code: 'MISSING_API_KEY',
         status: 'error',
       },
@@ -60,7 +72,7 @@ export function handleAIError(error: unknown) {
     return NextResponse.json(
       {
         error:
-          'OpenAI API key is invalid. Check your .env.local OPENAI_API_KEY',
+          'API key is invalid. Check your environment variables.',
         code: 'INVALID_API_KEY',
         status: 'error',
       },
@@ -72,12 +84,13 @@ export function handleAIError(error: unknown) {
     return NextResponse.json(
       {
         error:
-          'Rate limited by OpenAI. Wait a moment and try again.',
+          'Rate limited by AI service. Wait a moment and try again.',
         code: 'RATE_LIMIT',
-        status: 'error',
+        status: 429,
       },
       { status: 429 }
     )
+  }
   }
 
   if (errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED')) {
