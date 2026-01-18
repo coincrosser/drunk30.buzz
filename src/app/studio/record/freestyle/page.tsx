@@ -56,7 +56,6 @@ export default function FreestyleRecordPage() {
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const previewRef = useRef<HTMLVideoElement>(null)
-  const avatarCanvasRef = useRef<HTMLCanvasElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -122,7 +121,26 @@ export default function FreestyleRecordPage() {
   }, [initializeCamera])
 
   const startRecording = () => {
-    const source = recordMode === 'avatar' && avatarCanvasRef.current ? avatarCanvasRef.current : streamRef.current
+    let source: MediaStream | null = null
+    
+    if (recordMode === 'avatar') {
+      // For avatar mode, capture canvas stream
+      const canvas = document.querySelector('canvas')
+      if (!canvas) {
+        toast({ title: 'Error', description: 'Avatar canvas not found', variant: 'destructive' })
+        return
+      }
+      source = canvas.captureStream(30)
+      
+      // Add audio tracks if available
+      if (streamRef.current) {
+        const audioTracks = streamRef.current.getAudioTracks()
+        audioTracks.forEach((track) => source!.addTrack(track))
+      }
+    } else {
+      source = streamRef.current
+    }
+    
     if (!source) return
 
     chunksRef.current = []
@@ -145,20 +163,8 @@ export default function FreestyleRecordPage() {
     }
 
     try {
-      let recordStream: MediaStream
-      if (recordMode === 'avatar' && avatarCanvasRef.current) {
-        const canvasStream = avatarCanvasRef.current.captureStream(30)
-        if (streamRef.current) {
-          const audioTracks = streamRef.current.getAudioTracks()
-          audioTracks.forEach((track) => canvasStream.addTrack(track))
-        }
-        recordStream = canvasStream
-      } else {
-        recordStream = streamRef.current!
-      }
-
       const options = selectedMimeType ? { mimeType: selectedMimeType } : {}
-      const mediaRecorder = new MediaRecorder(recordStream, options)
+      const mediaRecorder = new MediaRecorder(source, options)
       mediaRecorderRef.current = mediaRecorder
 
       mediaRecorder.ondataavailable = (event) => {
@@ -293,7 +299,7 @@ export default function FreestyleRecordPage() {
                   )}
                 </>
               ) : (
-                <FaceTrackedAvatar canvasRef={avatarCanvasRef} avatarImage={avatarImage} />
+                <FaceTrackedAvatar baseImage={avatarImage || '/avatar-base.png'} width={800} height={450} />
               )}
             </div>
 
