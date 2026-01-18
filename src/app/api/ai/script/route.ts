@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { openai, AI_MODEL, SYSTEM_PROMPT } from '@/lib/openai'
+import { gemini, AI_MODEL, SYSTEM_PROMPT } from '@/lib/gemini'
 import { db } from '@/lib/db'
 import { handleAIError, validateInput } from '@/lib/ai-error-handler'
 
@@ -34,14 +34,13 @@ Write the script as plain text, ready to be read from a teleprompter. Use short 
 
     console.log(`🎬 Generating script for "${title || 'Untitled'}"...`)
 
-    const completion = await openai.chat.completions.create({
+    const completion = await gemini.chat.completions.create({
       model: AI_MODEL,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: prompt },
       ],
       temperature: 0.7,
-      max_tokens: 4000,
     })
 
     const script = completion.choices[0]?.message?.content

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { openai, AI_MODEL, SYSTEM_PROMPT } from '@/lib/openai'
+import { gemini, AI_MODEL, SYSTEM_PROMPT } from '@/lib/gemini'
 import { db } from '@/lib/db'
 import { handleAIError, validateInput } from '@/lib/ai-error-handler'
 
@@ -41,13 +41,12 @@ Tone: Honest, grounded, focused on learning and building. No clickbait or hype.`
 
     console.log(`📹 Generating YouTube pack for: "${title}"...`)
 
-    const completion = await openai.chat.completions.create({
+    const completion = await gemini.chat.completions.create({
       model: AI_MODEL,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: prompt },
       ],
-      response_format: { type: 'json_object' },
       temperature: 0.8,
     })
 
