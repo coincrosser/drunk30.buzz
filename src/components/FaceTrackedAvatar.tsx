@@ -194,6 +194,12 @@ export default function FaceTrackedAvatar({
     }
   }, [baseImage])
 
+  // Auto-start face tracking on mount
+  useEffect(() => {
+    initFaceTracking()
+    return () => stopTracking()
+  }, [])
+
   // Draw avatar
   useEffect(() => {
     const canvas = canvasRef.current
@@ -264,24 +270,6 @@ export default function FaceTrackedAvatar({
         height={height}
         className="rounded-lg border border-gray-600"
       />
-      
-      <div className="mt-4 flex gap-2">
-        {!isTracking ? (
-          <button
-            onClick={initFaceTracking}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Start Face Tracking
-          </button>
-        ) : (
-          <button
-            onClick={stopTracking}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-          >
-            Stop Tracking
-          </button>
-        )}
-      </div>
       
       {isTracking && (
         <div className="mt-2 text-xs text-gray-400 font-mono">
