@@ -83,12 +83,10 @@ ${outline.callToAction}`
           where: { episodeId },
           create: {
             episodeId,
-            topic,
             content: formattedContent,
             structured: outline,
           },
           update: {
-            topic,
             content: formattedContent,
             structured: outline,
           },
