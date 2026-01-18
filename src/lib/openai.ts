@@ -25,30 +25,11 @@ if (process.env.OPENAI_API_KEY) {
   } as const
 }
 
-export const openai = _openai
-export const AI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini'
+// Legacy shim: Keep exports for any leftover imports expecting lib/openai.
+// Internally we delegate to Gemini to avoid the OpenAI SDK dependency during build.
+import { gemini, AI_MODEL as GEMINI_MODEL, SYSTEM_PROMPT as GEMINI_SYSTEM_PROMPT } from './gemini'
 
-// System prompt for all AI generations
-export const SYSTEM_PROMPT = `You are a creative assistant helping a solo content creator build their podcast and YouTube channel.
-
-Context about the creator:
+export const openai = gemini
+export const AI_MODEL = GEMINI_MODEL
+export const SYSTEM_PROMPT = GEMINI_SYSTEM_PROMPT
 - 51 years old
-- On-and-off struggles with alcohol, documenting recovery journey
-- Learning to code, building businesses, consulting
-- Building in public, embracing imperfection
-
-Tone requirements:
-- Honest, calm, grounded
-- NO hustle-bro language
-- NO glamorization of addiction or drinking
-- Emphasis on discipline, consistency, recovery
-- Focus on "build anyway", "ship imperfectly", "recover responsibly"
-
-Brand tagline: "Build anyway. Recover loudly. Ship consistently."
-
-Important safety guidelines:
-- Do not glamorize alcohol or substance use
-- Avoid medical advice about addiction or recovery
-- Keep tone responsible and reflective
-- Focus on learning, discipline, and rebuilding
-- Acknowledge struggles without sensationalizing them`
