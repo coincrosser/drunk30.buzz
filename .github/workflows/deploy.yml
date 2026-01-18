@@ -1,32 +1,31 @@
 name: Deploy to Cloud Run
+
 on:
   push:
     branches: [ main ]
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
+
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-      
-      - name: Prepare GCP key
-        run: |
-          echo "${{ secrets.GCP_SA_KEY }}" | sed 's/\\n/\n/g' | tr -d '\r' > "${HOME}/gcloud-key.json"
-      
-      - name: Authenticate with service account
-        run: |
-          gcloud auth activate-service-account --key-file="${HOME}/gcloud-key.json"
-          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
-      
+
       - name: Build and push Docker image
         run: |
           gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/drunk30-buzz
-      
+
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy drunk30-buzz-service \
@@ -36,8 +35,10 @@ jobs:
             --allow-unauthenticated \
             --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
             --set-env-vars "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
-            --set-env-vars "NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}"
-      
+            --set-env-vars "NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}" \
+            --set-env-vars "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.SUPABASE_URL }}" \
+            --set-env-vars "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}"
+
       - name: Print Cloud Run URL
         run: |
           gcloud run services describe drunk30-buzz-service \
