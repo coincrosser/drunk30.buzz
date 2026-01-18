@@ -118,7 +118,7 @@ export default function FaceTrackedAvatar({
       const Camera = (window as any).Camera
 
       const faceMesh = new FaceMesh({
-        locateFile: (file) => {
+        locateFile: (file: string) => {
           return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
         },
       })
