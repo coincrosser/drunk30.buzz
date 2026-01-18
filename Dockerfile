@@ -1,34 +1,51 @@
-# Use Node.js 18 slim image for smaller size
-FROM node:18-slim
+# Use Node.js 18 Alpine image for smaller size
+FROM node:18-alpine AS base
 
-# Set working directory
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+COPY prisma ./prisma/
 
-# Install production dependencies only
-RUN npm ci --only=production && npm cache clean --force
+# Install dependencies
+RUN npm ci
 
-# Copy all application files
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Create a non-root user to run the app
-RUN useradd -m -u 1001 appuser && \
-    chown -R appuser:appuser /app
+# Build Next.js app
+RUN npm run build
 
-# Switch to non-root user
-USER appuser
+# Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /app
 
-# Expose port (Cloud Run uses 8080 by default)
-EXPOSE 8080
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:8080/health', (r) => {r.statusCode === 200 ? process.exit(0) : process.exit(1)})"
-
-# Set environment to production
 ENV NODE_ENV=production
 
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy necessary files
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
+USER nextjs
+
+# Cloud Run sets PORT environment variable
+EXPOSE 8080
+ENV PORT=8080
+ENV HOSTNAME="0.0.0.0"
+
 # Start the application
-CMD ["node", "app.js"]
+CMD ["node", "server.js"]
