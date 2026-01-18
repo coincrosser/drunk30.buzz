@@ -26,7 +26,7 @@ const studioLinks = [
 
 export function SiteHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const pathname = usePathname()
+  const pathname = usePathname() || ''
   const isStudio = pathname.startsWith('/studio')
 
   const links = isStudio ? studioLinks : publicLinks
