@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { openai, AI_MODEL, SYSTEM_PROMPT } from '@/lib/openai'
 import { db } from '@/lib/db'
+import { handleAIError, validateInput } from '@/lib/ai-error-handler'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { episodeId, topic, context } = body
 
-    if (!topic) {
-      return NextResponse.json(
-        { error: 'Topic is required' },
-        { status: 400 }
-      )
-    }
+    // Validate required fields
+    validateInput(body, ['topic'])
 
     const prompt = `Create an outline for a podcast/YouTube episode about: ${topic}
 
@@ -37,6 +34,8 @@ Format the response as JSON with this structure:
 
 Remember: Keep the tone honest, grounded, and reflective. No hustle-bro language. Focus on learning and building.`
 
+    console.log(`📋 Generating outline for topic: "${topic}"...`)
+
     const completion = await openai.chat.completions.create({
       model: AI_MODEL,
       messages: [
@@ -59,7 +58,14 @@ Remember: Keep the tone honest, grounded, and reflective. No hustle-bro language
 ${outline.hook}
 
 ## Main Points
-${outline.mainPoints.map((point: { title: string; notes: string }, i: number) => `${i + 1}. **${point.title}**\n   ${point.notes}`).join('\n\n')}
+${outline.mainPoints
+  .map(
+    (point: any, i: number) => `
+### ${i + 1}. ${point.title}
+${point.notes}
+`
+  )
+  .join('\n')}
 
 ## Personal Angle
 ${outline.personalAngle}
@@ -72,35 +78,37 @@ ${outline.callToAction}`
 
     // Save to database if episodeId provided
     if (episodeId) {
-      await db.episodeOutline.upsert({
-        where: { episodeId },
-        create: {
-          episodeId,
-          content: formattedContent,
-        },
-        update: {
-          content: formattedContent,
-        },
-      })
+      try {
+        await db.episodeOutline.upsert({
+          where: { episodeId },
+          create: {
+            episodeId,
+            topic,
+            content: formattedContent,
+            structured: outline,
+          },
+          update: {
+            topic,
+            content: formattedContent,
+            structured: outline,
+          },
+        })
 
-      // Update episode status
-      await db.episode.update({
-        where: { id: episodeId },
-        data: { status: 'OUTLINE' },
-      })
+        // Update episode status
+        await db.episode.update({
+          where: { id: episodeId },
+          data: { status: 'OUTLINE' },
+        })
+
+        console.log(`✅ Outline saved for episode ${episodeId}`)
+      } catch (dbError) {
+        console.warn('⚠️  Could not save outline to database:', dbError)
+        // Continue - return the generated outline even if DB save fails
+      }
     }
 
-    return NextResponse.json({
-      outline: {
-        ...outline,
-        formatted: formattedContent,
-      },
-    })
+    return NextResponse.json({ outline, formattedContent })
   } catch (error) {
-    console.error('Failed to generate outline:', error)
-    return NextResponse.json(
-      { error: 'Failed to generate outline' },
-      { status: 500 }
-    )
+    return handleAIError(error)
   }
 }

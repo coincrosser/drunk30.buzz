@@ -83,6 +83,17 @@ export default function RecordPage() {
         streamRef.current.getTracks().forEach((track) => track.stop())
       }
 
+      // Check if mediaDevices is supported
+      if (!navigator.mediaDevices?.getUserMedia) {
+        console.error('getUserMedia is not supported in this browser')
+        toast({
+          title: 'Browser Not Supported',
+          description: 'Your browser does not support camera recording. Try Chrome, Firefox, or Edge.',
+          variant: 'destructive',
+        })
+        return
+      }
+
       const constraints: MediaStreamConstraints = {
         video: videoEnabled
           ? {
@@ -108,11 +119,24 @@ export default function RecordPage() {
 
       setHasVideoPermission(stream.getVideoTracks().length > 0)
       setHasAudioPermission(stream.getAudioTracks().length > 0)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to access camera:', err)
+      
+      let errorMessage = 'Please allow camera and microphone access to record.'
+      
+      if (err.name === 'NotAllowedError') {
+        errorMessage = 'Camera permission was denied. Check browser settings and try again.'
+      } else if (err.name === 'NotFoundError') {
+        errorMessage = 'No camera or microphone found on this device.'
+      } else if (err.name === 'NotReadableError') {
+        errorMessage = 'Camera is in use by another application. Close it and try again.'
+      } else if (err.name === 'SecurityError') {
+        errorMessage = 'Camera access requires HTTPS. If testing, use localhost.'
+      }
+      
       toast({
-        title: 'Camera Access Denied',
-        description: 'Please allow camera and microphone access to record.',
+        title: 'Camera Access Error',
+        description: errorMessage,
         variant: 'destructive',
       })
     }
@@ -134,9 +158,29 @@ export default function RecordPage() {
     if (!streamRef.current) return
 
     chunksRef.current = []
-    const options = { mimeType: 'video/webm;codecs=vp9,opus' }
+    
+    // Try different codec options for browser compatibility
+    const mimeTypes = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm;codecs=h264,opus',
+      'video/webm',
+    ]
+    
+    let selectedMimeType = ''
+    for (const mimeType of mimeTypes) {
+      if (MediaRecorder.isTypeSupported(mimeType)) {
+        selectedMimeType = mimeType
+        break
+      }
+    }
+    
+    if (!selectedMimeType && MediaRecorder.isTypeSupported('audio/webm')) {
+      selectedMimeType = 'audio/webm'
+    }
 
     try {
+      const options = selectedMimeType ? { mimeType: selectedMimeType } : {}
       const mediaRecorder = new MediaRecorder(streamRef.current, options)
       mediaRecorderRef.current = mediaRecorder
 
@@ -147,7 +191,8 @@ export default function RecordPage() {
       }
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+        const mimeType = selectedMimeType || 'video/webm'
+        const blob = new Blob(chunksRef.current, { type: mimeType })
         setRecordedBlob(blob)
 
         // Create preview URL
@@ -163,11 +208,16 @@ export default function RecordPage() {
       timerRef.current = setInterval(() => {
         setDuration((prev) => prev + 1)
       }, 1000)
-    } catch (err) {
+      
+      toast({
+        title: 'Recording Started',
+        description: `Recording in ${selectedMimeType || 'default format'}`,
+      })
+    } catch (err: any) {
       console.error('Failed to start recording:', err)
       toast({
         title: 'Recording Failed',
-        description: 'Could not start recording. Please try again.',
+        description: err.message || 'Could not start recording. Please try again.',
         variant: 'destructive',
       })
     }

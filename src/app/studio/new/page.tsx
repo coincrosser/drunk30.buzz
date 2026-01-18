@@ -45,7 +45,7 @@ export default function NewEpisodePage() {
         throw new Error(data.error || 'Failed to generate outline')
       }
 
-      setGeneratedOutline(data.outline)
+      setGeneratedOutline(data.formattedContent || JSON.stringify(data.outline, null, 2))
       if (!title && data.title) {
         setTitle(data.title)
       }
@@ -57,7 +57,7 @@ export default function NewEpisodePage() {
   }
 
   const handleGenerateScript = async () => {
-    if (!generatedOutline.trim()) {
+    if (!generatedOutline || !generatedOutline.trim()) {
       setError('Please generate an outline first')
       return
     }
@@ -82,7 +82,7 @@ export default function NewEpisodePage() {
         throw new Error(data.error || 'Failed to generate script')
       }
 
-      setGeneratedScript(data.script)
+      setGeneratedScript(data.script.content || data.script)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate script')
     } finally {
@@ -246,7 +246,7 @@ export default function NewEpisodePage() {
               <div className="flex gap-2">
                 <Button
                   onClick={handleGenerateScript}
-                  disabled={isGenerating || !generatedOutline.trim()}
+                  disabled={isGenerating || !generatedOutline || !generatedOutline.trim()}
                 >
                   {isGenerating ? (
                     <>
@@ -281,6 +281,16 @@ export default function NewEpisodePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="script-title">Episode Title *</Label>
+                <Input
+                  id="script-title"
+                  placeholder="Enter episode title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="script">Script</Label>
                 <Textarea

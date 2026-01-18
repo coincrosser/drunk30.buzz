@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { openai, AI_MODEL, SYSTEM_PROMPT } from '@/lib/openai'
 import { db } from '@/lib/db'
+import { handleAIError, validateInput } from '@/lib/ai-error-handler'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { episodeId, title, description, script } = body
 
-    if (!title) {
-      return NextResponse.json(
-        { error: 'Title is required' },
-        { status: 400 }
-      )
-    }
+    // Validate required fields
+    validateInput(body, ['title'])
 
     const prompt = `Generate YouTube metadata for a video with this context:
 
@@ -42,6 +39,8 @@ Return as JSON:
 
 Tone: Honest, grounded, focused on learning and building. No clickbait or hype.`
 
+    console.log(`📹 Generating YouTube pack for: "${title}"...`)
+
     const completion = await openai.chat.completions.create({
       model: AI_MODEL,
       messages: [
@@ -61,43 +60,51 @@ Tone: Honest, grounded, focused on learning and building. No clickbait or hype.`
 
     // Save to database if episodeId provided
     if (episodeId) {
-      const existing = await db.youTubePack.findUnique({
-        where: { episodeId },
-      })
-
-      if (existing) {
-        await db.youTubePack.update({
+      try {
+        const existing = await db.youTubePack.findUnique({
           where: { episodeId },
-          data: {
-            titleOptions: youtubePack.titles,
-            description: youtubePack.description,
-            hashtags: youtubePack.hashtags,
-            tags: youtubePack.tags,
-            chapters: youtubePack.chapters,
-            pinnedComment: youtubePack.pinnedComment,
-            thumbnailIdeas: youtubePack.thumbnailIdeas,
-          },
         })
-      } else {
-        await db.youTubePack.create({
-          data: {
-            episodeId,
-            titleOptions: youtubePack.titles,
-            description: youtubePack.description,
-            hashtags: youtubePack.hashtags,
-            tags: youtubePack.tags,
-            chapters: youtubePack.chapters,
-            pinnedComment: youtubePack.pinnedComment,
-            thumbnailIdeas: youtubePack.thumbnailIdeas,
-          },
-        })
+
+        if (existing) {
+          await db.youTubePack.update({
+            where: { episodeId },
+            data: {
+              titleOptions: youtubePack.titles,
+              description: youtubePack.description,
+              hashtags: youtubePack.hashtags,
+              tags: youtubePack.tags,
+              chapters: youtubePack.chapters,
+              pinnedComment: youtubePack.pinnedComment,
+              thumbnailIdeas: youtubePack.thumbnailIdeas,
+            },
+          })
+        } else {
+          await db.youTubePack.create({
+            data: {
+              episodeId,
+              titleOptions: youtubePack.titles,
+              description: youtubePack.description,
+              hashtags: youtubePack.hashtags,
+              tags: youtubePack.tags,
+              chapters: youtubePack.chapters,
+              pinnedComment: youtubePack.pinnedComment,
+              thumbnailIdeas: youtubePack.thumbnailIdeas,
+            },
+          })
+        }
+
+        console.log(`✅ YouTube pack saved for episode ${episodeId}`)
+      } catch (dbError) {
+        console.warn('⚠️  Could not save YouTube pack to database:', dbError)
+        // Continue - return the generated pack even if DB save fails
       }
     }
 
     return NextResponse.json({ youtubePack })
   } catch (error) {
-    console.error('Failed to generate YouTube pack:', error)
-    return NextResponse.json(
+    return handleAIError(error)
+  }
+}
       { error: 'Failed to generate YouTube pack' },
       { status: 500 }
     )

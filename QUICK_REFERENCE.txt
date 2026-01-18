@@ -1,0 +1,148 @@
+// Quick Reference: Commands to Get drunk30.buzz Running
+
+// ============================================
+// INITIAL SETUP (Do once)
+// ============================================
+
+// 1. Install dependencies
+npm install
+
+// 2. Set up database
+npm run prisma:migrate
+
+// 3. Start development server
+npm run dev
+// → Opens at http://localhost:3000
+
+
+// ============================================
+// DAILY DEVELOPMENT
+// ============================================
+
+// Start dev server (run this first every time)
+npm run dev
+
+// In another terminal, test generators
+bash test-generators.sh
+
+// View database GUI
+npm run prisma:studio
+
+
+// ============================================
+// WHEN SOMETHING BREAKS
+// ============================================
+
+// Full reset
+rm -rf node_modules package-lock.json .next
+npm install
+npm run prisma:migrate
+npm run dev
+
+// Just the database
+npm run prisma:migrate
+
+// Just the server cache
+rm -rf .next
+npm run dev
+
+
+// ============================================
+// BUILDING FOR PRODUCTION
+// ============================================
+
+// Build the project
+npm run build
+
+// Start production server
+npm run start
+
+
+// ============================================
+// DEBUGGING TIPS
+// ============================================
+
+// Check Node version (needs >= 18)
+node -v
+
+// Test a generator endpoint
+curl -X POST http://localhost:3000/api/ai/outline \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"Test Topic"}'
+
+// Check if .env.local exists
+ls -la .env.local
+
+// View server logs
+npm run dev  // Shows all logs in terminal
+
+// Browser console
+F12 → Console tab
+
+
+// ============================================
+// FILE LOCATIONS FOR QUICK EDITS
+// ============================================
+
+// Environment setup
+.env.local                              // API keys & database
+
+// Generator APIs
+src/app/api/ai/outline/route.ts         // Outline generator
+src/app/api/ai/script/route.ts          // Script generator
+src/app/api/ai/youtube-pack/route.ts    // YouTube pack generator
+
+// Camera recording
+src/app/studio/record/[id]/page.tsx     // Recording interface
+
+// Configuration
+tsconfig.json                           // TypeScript settings
+next.config.js                          // Next.js settings
+package.json                            // Dependencies & scripts
+
+// Documentation
+SETUP_GUIDE.md                          // Full setup guide
+QUICK_START.md                          // Quick checklist
+FIXES_APPLIED.md                        // What was fixed
+
+
+// ============================================
+// ENVIRONMENT VARIABLES (.env.local)
+// ============================================
+
+// Get API key from: https://platform.openai.com/api-keys
+OPENAI_API_KEY=sk-proj-...
+
+// Database (pick one)
+// PostgreSQL:
+DATABASE_URL=postgresql://user:password@localhost:5432/drunk30
+
+// MySQL:
+DATABASE_URL=mysql://user:password@localhost:3306/drunk30
+
+// SQLite (local file):
+DATABASE_URL=file:./prisma/dev.db
+
+// Optional
+OPENAI_MODEL=gpt-4o-mini
+NODE_ENV=development
+
+
+// ============================================
+// USEFUL LINKS
+// ============================================
+
+// OpenAI API Keys
+// https://platform.openai.com/api-keys
+
+// Next.js Documentation
+// https://nextjs.org/docs
+
+// Prisma ORM
+// https://www.prisma.io/docs
+
+// Install PostgreSQL
+// https://www.postgresql.org/download/
+
+// Install MySQL
+// https://dev.mysql.com/downloads/
