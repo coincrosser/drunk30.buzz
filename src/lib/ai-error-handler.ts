@@ -91,7 +91,6 @@ export function handleAIError(error: unknown) {
       { status: 429 }
     )
   }
-  }
 
   if (errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED')) {
     return NextResponse.json(
