@@ -33,7 +33,7 @@ interface Episode {
 }
 
 export default function RecordPage() {
-  const params = useParams()
+  const params = useParams() as { id: string }
   const router = useRouter()
   const { toast } = useToast()
 
