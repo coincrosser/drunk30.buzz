@@ -67,7 +67,7 @@ const JOB_LABELS: Record<JobType, { label: string; icon: React.ComponentType<{ c
 }
 
 export default function ProcessPage() {
-  const params = useParams()
+  const params = useParams() as { id: string }
   const router = useRouter()
   const { toast } = useToast()
 
