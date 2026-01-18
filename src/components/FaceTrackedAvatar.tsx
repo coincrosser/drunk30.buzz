@@ -91,8 +91,31 @@ export default function FaceTrackedAvatar({
 
   const initFaceTracking = useCallback(async () => {
     try {
-      const { FaceMesh } = await import('@mediapipe/face_mesh')
-      const { Camera } = await import('@mediapipe/camera_utils')
+      // Dynamically import MediaPipe from CDN
+      if (!(window as any).FaceMesh) {
+        // Load FaceMesh from CDN
+        await new Promise((resolve) => {
+          const script = document.createElement('script')
+          script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js'
+          script.async = true
+          script.onload = resolve
+          document.head.appendChild(script)
+        })
+      }
+      
+      if (!(window as any).Camera) {
+        // Load Camera from CDN
+        await new Promise((resolve) => {
+          const script = document.createElement('script')
+          script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js'
+          script.async = true
+          script.onload = resolve
+          document.head.appendChild(script)
+        })
+      }
+
+      const FaceMesh = (window as any).FaceMesh
+      const Camera = (window as any).Camera
 
       const faceMesh = new FaceMesh({
         locateFile: (file) => {
