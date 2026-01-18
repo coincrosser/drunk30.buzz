@@ -48,7 +48,7 @@ interface Episode {
 }
 
 export default function YouTubePackPage() {
-  const params = useParams()
+  const params = useParams() as { id: string }
   const router = useRouter()
   const { toast } = useToast()
 

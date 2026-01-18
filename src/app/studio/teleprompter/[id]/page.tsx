@@ -15,7 +15,7 @@ interface Episode {
 }
 
 export default function TeleprompterPage() {
-  const params = useParams()
+  const params = useParams() as { id: string }
   const router = useRouter()
   const [episode, setEpisode] = useState<Episode | null>(null)
   const [loading, setLoading] = useState(true)
