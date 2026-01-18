@@ -84,11 +84,11 @@ ${outline.callToAction}`
           create: {
             episodeId,
             content: formattedContent,
-            structured: outline,
+            prompt,
           },
           update: {
             content: formattedContent,
-            structured: outline,
+            prompt,
           },
         })
 
