@@ -76,41 +76,58 @@ export default function FreestyleRecordPage() {
         return
       }
 
+      // Always request both video and audio together for better compatibility
       const constraints: MediaStreamConstraints = {
-        video: videoEnabled
-          ? {
-              facingMode,
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
-            }
-          : false,
-        audio: audioEnabled
-          ? {
-              echoCancellation: true,
-              noiseSuppression: true,
-            }
-          : false,
+        video: {
+          facingMode,
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       }
 
+      console.log('Requesting camera/mic access...', constraints)
       const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      console.log('Camera/mic access granted', stream.getTracks())
       streamRef.current = stream
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream
+        await videoRef.current.play().catch(console.error)
       }
 
-      setHasVideoPermission(stream.getVideoTracks().length > 0)
-      setHasAudioPermission(stream.getAudioTracks().length > 0)
+      const videoTracks = stream.getVideoTracks()
+      const audioTracks = stream.getAudioTracks()
+      
+      setHasVideoPermission(videoTracks.length > 0)
+      setHasAudioPermission(audioTracks.length > 0)
+      
+      console.log(`Video tracks: ${videoTracks.length}, Audio tracks: ${audioTracks.length}`)
+      
+      toast({
+        title: 'Camera Ready',
+        description: `Video: ${videoTracks.length > 0 ? 'Yes' : 'No'} | Audio: ${audioTracks.length > 0 ? 'Yes' : 'No'}`,
+      })
     } catch (err: any) {
+      console.error('Camera initialization error:', err)
       let errorMessage = 'Please allow camera and microphone access to record.'
-      if (err.name === 'NotAllowedError') errorMessage = 'Camera permission was denied. Check browser settings and try again.'
+      if (err.name === 'NotAllowedError') errorMessage = 'Camera permission was denied. Click "Allow" when prompted, or check browser settings.'
       else if (err.name === 'NotFoundError') errorMessage = 'No camera or microphone found on this device.'
       else if (err.name === 'NotReadableError') errorMessage = 'Camera is in use by another application. Close it and try again.'
       else if (err.name === 'SecurityError') errorMessage = 'Camera access requires HTTPS. If testing, use localhost.'
+      else errorMessage = `Camera error: ${err.message || 'Unknown error'}`
 
       toast({ title: 'Camera Access Error', description: errorMessage, variant: 'destructive' })
+      
+      // Set permissions to false on error
+      setHasVideoPermission(false)
+      setHasAudioPermission(false)
     }
-  }, [audioEnabled, facingMode, toast, videoEnabled])
+  }, [facingMode, toast])
 
   useEffect(() => {
     initializeCamera()
