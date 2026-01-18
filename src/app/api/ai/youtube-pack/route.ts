@@ -105,8 +105,3 @@ Tone: Honest, grounded, focused on learning and building. No clickbait or hype.`
     return handleAIError(error)
   }
 }
-      { error: 'Failed to generate YouTube pack' },
-      { status: 500 }
-    )
-  }
-}
