@@ -75,12 +75,20 @@ export default async function StudioPage() {
           <h1 className="text-2xl font-bold">Studio Dashboard</h1>
           <p className="text-muted-foreground">Create, record, and publish episodes</p>
         </div>
-        <Button asChild size="lg">
-          <Link href="/studio/new">
-            <Plus className="mr-2 h-4 w-4" />
-            New Episode
-          </Link>
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button asChild variant="outline" size="lg">
+            <Link href="/studio/record/freestyle">
+              <Mic2 className="mr-2 h-4 w-4" />
+              Record Freestyle
+            </Link>
+          </Button>
+          <Button asChild size="lg">
+            <Link href="/studio/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New Episode
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3 mb-8">
