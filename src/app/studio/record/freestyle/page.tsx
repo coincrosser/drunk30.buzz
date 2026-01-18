@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -17,6 +18,7 @@ import {
   Play,
   Pause,
   Camera,
+  User,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,11 +27,15 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { cn, formatDuration } from '@/lib/utils'
 
+const FaceTrackedAvatar = dynamic(() => import('@/components/FaceTrackedAvatar'), { ssr: false })
+
 // Freestyle recorder: no episode required. User records locally and can download or jump to YouTube upload.
 
 type RecordingState = 'idle' | 'recording' | 'paused' | 'stopped'
 
 type FacingMode = 'user' | 'environment'
+
+type RecordMode = 'camera' | 'avatar'
 
 export default function FreestyleRecordPage() {
   const router = useRouter()
@@ -45,9 +51,12 @@ export default function FreestyleRecordPage() {
   const [duration, setDuration] = useState(0)
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null)
   const [facingMode, setFacingMode] = useState<FacingMode>('user')
+  const [recordMode, setRecordMode] = useState<RecordMode>('camera')
+  const [avatarImage, setAvatarImage] = useState<string | null>(null)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const previewRef = useRef<HTMLVideoElement>(null)
+  const avatarCanvasRef = useRef<HTMLCanvasElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -113,7 +122,8 @@ export default function FreestyleRecordPage() {
   }, [initializeCamera])
 
   const startRecording = () => {
-    if (!streamRef.current) return
+    const source = recordMode === 'avatar' && avatarCanvasRef.current ? avatarCanvasRef.current : streamRef.current
+    if (!source) return
 
     chunksRef.current = []
     const mimeTypes = [
@@ -135,8 +145,20 @@ export default function FreestyleRecordPage() {
     }
 
     try {
+      let recordStream: MediaStream
+      if (recordMode === 'avatar' && avatarCanvasRef.current) {
+        const canvasStream = avatarCanvasRef.current.captureStream(30)
+        if (streamRef.current) {
+          const audioTracks = streamRef.current.getAudioTracks()
+          audioTracks.forEach((track) => canvasStream.addTrack(track))
+        }
+        recordStream = canvasStream
+      } else {
+        recordStream = streamRef.current!
+      }
+
       const options = selectedMimeType ? { mimeType: selectedMimeType } : {}
-      const mediaRecorder = new MediaRecorder(streamRef.current, options)
+      const mediaRecorder = new MediaRecorder(recordStream, options)
       mediaRecorderRef.current = mediaRecorder
 
       mediaRecorder.ondataavailable = (event) => {
@@ -213,6 +235,17 @@ export default function FreestyleRecordPage() {
     URL.revokeObjectURL(url)
   }
 
+  const handleAvatarImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        setAvatarImage(ev.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   return (
     <div className="container py-6 md:py-8">
       <div className="flex items-center gap-3 mb-6">
@@ -232,14 +265,44 @@ export default function FreestyleRecordPage() {
             <CardDescription>Record video/audio locally. Nothing is uploaded automatically.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex gap-2 mb-2">
+              <Button
+                variant={recordMode === 'camera' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setRecordMode('camera')}
+              >
+                <Camera className="h-4 w-4 mr-2" /> Camera
+              </Button>
+              <Button
+                variant={recordMode === 'avatar' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setRecordMode('avatar')}
+              >
+                <User className="h-4 w-4 mr-2" /> Avatar
+              </Button>
+            </div>
+
             <div className="relative aspect-video rounded-lg border bg-black overflow-hidden">
-              <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
-              {!hasVideoPermission && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-white text-center px-4">
-                  <p>Allow camera access to start recording.</p>
-                </div>
+              {recordMode === 'camera' ? (
+                <>
+                  <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
+                  {!hasVideoPermission && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-white text-center px-4">
+                      <p>Allow camera access to start recording.</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <FaceTrackedAvatar canvasRef={avatarCanvasRef} avatarImage={avatarImage} />
               )}
             </div>
+
+            {recordMode === 'avatar' && !avatarImage && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Upload Avatar Image</label>
+                <Input type="file" accept="image/*" onChange={handleAvatarImageUpload} />
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-2">
               {recordingState === 'idle' && (
