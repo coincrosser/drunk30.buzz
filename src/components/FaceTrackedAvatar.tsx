@@ -10,23 +10,20 @@ interface AvatarState {
   mouthOpen: number
 }
 
-interface FaceTrackedAvatarProps {
-  baseImage: string
-  width?: number
-  height?: number
-}
-
 export default function FaceTrackedAvatar({
   baseImage,
   width = 800,
   height = 600,
-}: FaceTrackedAvatarProps) {
+}: {
+  baseImage: string
+  width?: number
+  height?: number
+}) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [trackingStatus, setTrackingStatus] = useState<'idle' | 'initializing' | 'tracking' | 'no-face' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
   
-  // Use refs for animation state to avoid re-render issues
   const avatarStateRef = useRef<AvatarState>({
     headRotationX: 0,
     headRotationY: 0,
@@ -43,7 +40,7 @@ export default function FaceTrackedAvatar({
   const faceDetectedTimeRef = useRef(0)
   const isTrackingRef = useRef(false)
 
-  const smoothingFactor = 0.5
+  const smoothingFactor = 0.6
 
   const smoothValue = (current: number, target: number) => {
     return current + (target - current) * smoothingFactor
@@ -96,13 +93,13 @@ export default function FaceTrackedAvatar({
       y: (leftEye.y + rightEye.y) / 2,
     }
 
-    const rotationY = (nose.x - eyeCenter.x) * 150
-    const rotationX = (forehead.y - nose.y) * 100
+    // MASSIVE multipliers - 4x previous values
+    const rotationY = (nose.x - eyeCenter.x) * 500
+    const rotationX = (forehead.y - nose.y) * 400
 
     return { rotationX, rotationY }
   }
 
-  // Separate drawing function that reads from ref
   const drawAvatar = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -117,78 +114,78 @@ export default function FaceTrackedAvatar({
     if (baseImgRef.current) {
       ctx.save()
 
-      // Head rotation - MORE DRAMATIC
-      const rotateAmount = (state.headRotationY * Math.PI) / 180 / 2.5
-      const scaleX = 1 + (Math.abs(state.headRotationY) / 80) * 0.2
-      const yOffset = state.headRotationX / 3
+      // SUPER DRAMATIC movement
+      const rotateAngle = (state.headRotationY * Math.PI) / 180  // Full degree conversion
+      const horizontalShift = state.headRotationY * 3
+      const verticalShift = state.headRotationX * 2
+      const scale = 1 + (Math.abs(state.headRotationY) / 30) * 0.15
 
       ctx.translate(width / 2, height / 2)
-      ctx.rotate(rotateAmount)
-      ctx.scale(scaleX, 1)
-      ctx.translate(-width / 2, -height / 2 + yOffset)
+      ctx.rotate(rotateAngle)
+      ctx.scale(scale, scale)
+      ctx.translate(-width / 2 + horizontalShift, -height / 2 + verticalShift)
 
       ctx.drawImage(baseImgRef.current, 0, 0, width, height)
       ctx.restore()
 
-      // Eye blink - black bars over eyes when blinking
+      // EYE BLINK
       const avgEyeOpen = (state.leftEyeOpen + state.rightEyeOpen) / 2
-      if (avgEyeOpen < 0.7) {
-        const blinkAmount = 1 - avgEyeOpen
-        ctx.fillStyle = `rgba(0, 0, 0, ${blinkAmount})`
-        // Left eye
-        ctx.fillRect(width * 0.25, height * 0.32, width * 0.18, height * 0.1)
-        // Right eye  
-        ctx.fillRect(width * 0.55, height * 0.32, width * 0.18, height * 0.1)
+      if (avgEyeOpen < 0.85) {
+        const blinkOpacity = Math.min(1, (1 - avgEyeOpen) * 2.5)
+        ctx.fillStyle = `rgba(0, 0, 0, ${blinkOpacity})`
+        ctx.fillRect(width * 0.20, height * 0.26, width * 0.25, height * 0.14)
+        ctx.fillRect(width * 0.50, height * 0.26, width * 0.25, height * 0.14)
       }
 
-      // Mouth open indicator
-      if (state.mouthOpen > 0.15) {
-        ctx.fillStyle = `rgba(80, 20, 20, ${Math.min(state.mouthOpen * 0.8, 0.7)})`
-        const mouthHeight = height * 0.03 + (state.mouthOpen * height * 0.05)
-        ctx.fillRect(width * 0.35, height * 0.68, width * 0.3, mouthHeight)
+      // MOUTH
+      if (state.mouthOpen > 0.08) {
+        const mouthOpacity = Math.min(0.95, state.mouthOpen * 2)
+        ctx.fillStyle = `rgba(40, 5, 5, ${mouthOpacity})`
+        const mouthHeight = height * 0.02 + (state.mouthOpen * height * 0.1)
+        ctx.beginPath()
+        ctx.ellipse(width * 0.5, height * 0.73, width * 0.14, mouthHeight, 0, 0, Math.PI * 2)
+        ctx.fill()
       }
+
+      // Green border when tracking
+      if (isTrackingRef.current) {
+        ctx.strokeStyle = '#00ff00'
+        ctx.lineWidth = 6
+        ctx.strokeRect(3, 3, width - 6, height - 6)
+      }
+
     } else {
       ctx.fillStyle = '#1a1a2e'
       ctx.fillRect(0, 0, width, height)
       ctx.fillStyle = '#888'
-      ctx.font = '24px sans-serif'
+      ctx.font = '28px sans-serif'
       ctx.textAlign = 'center'
-      ctx.fillText('Loading avatar image...', width / 2, height / 2)
+      ctx.fillText('Loading avatar...', width / 2, height / 2)
     }
   }, [width, height])
 
-  // Animation loop - runs continuously
   useEffect(() => {
     let running = true
-    
     const animate = () => {
       if (!running) return
       drawAvatar()
       animationRef.current = requestAnimationFrame(animate)
     }
-    
     animate()
-    
     return () => {
       running = false
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
-      }
+      if (animationRef.current) cancelAnimationFrame(animationRef.current)
     }
   }, [drawAvatar])
 
-  // Load base image
   useEffect(() => {
-    console.log('Loading avatar image:', baseImage)
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => {
       baseImgRef.current = img
-      console.log('✅ Avatar image loaded successfully')
+      console.log('Avatar loaded!')
     }
-    img.onerror = (e) => {
-      console.error('❌ Failed to load avatar image:', e)
-    }
+    img.onerror = () => console.error('Avatar load failed')
     img.src = baseImage
   }, [baseImage])
 
@@ -196,27 +193,23 @@ export default function FaceTrackedAvatar({
     try {
       setTrackingStatus('initializing')
       setError(null)
-      console.log('🎥 Starting face tracking...')
 
-      // Load MediaPipe scripts
       if (!(window as any).FaceMesh) {
-        console.log('📦 Loading FaceMesh...')
         await new Promise((resolve, reject) => {
           const script = document.createElement('script')
           script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js'
           script.onload = resolve
-          script.onerror = () => reject(new Error('Failed to load FaceMesh'))
+          script.onerror = reject
           document.head.appendChild(script)
         })
       }
 
       if (!(window as any).Camera) {
-        console.log('📦 Loading Camera utils...')
         await new Promise((resolve, reject) => {
           const script = document.createElement('script')
           script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js'
           script.onload = resolve
-          script.onerror = () => reject(new Error('Failed to load Camera'))
+          script.onerror = reject
           document.head.appendChild(script)
         })
       }
@@ -236,7 +229,7 @@ export default function FaceTrackedAvatar({
       })
 
       faceMesh.onResults((results: any) => {
-        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+        if (results.multiFaceLandmarks?.[0]) {
           const landmarks = results.multiFaceLandmarks[0]
           faceDetectedTimeRef.current = Date.now()
 
@@ -248,7 +241,6 @@ export default function FaceTrackedAvatar({
           const mouthOpen = getMouthOpenRatio(landmarks)
           const { rotationX, rotationY } = getHeadRotation(landmarks)
 
-          // Update ref directly for smooth animation
           const prev = avatarStateRef.current
           avatarStateRef.current = {
             headRotationX: smoothValue(prev.headRotationX, rotationX),
@@ -258,17 +250,14 @@ export default function FaceTrackedAvatar({
             mouthOpen: smoothValue(prev.mouthOpen, mouthOpen),
           }
 
-          // Update display state less frequently for UI
           setDisplayState({ ...avatarStateRef.current })
           
           if (!isTrackingRef.current) {
             isTrackingRef.current = true
             setTrackingStatus('tracking')
           }
-        } else {
-          if (Date.now() - faceDetectedTimeRef.current > 2000) {
-            setTrackingStatus('no-face')
-          }
+        } else if (Date.now() - faceDetectedTimeRef.current > 2000) {
+          setTrackingStatus('no-face')
         }
       })
 
@@ -284,13 +273,11 @@ export default function FaceTrackedAvatar({
           width: 640,
           height: 480,
         })
-
         cameraRef.current = camera
         await camera.start()
-        console.log('✅ Camera started!')
       }
     } catch (err: any) {
-      console.error('❌ Face tracking error:', err)
+      console.error('Error:', err)
       setTrackingStatus('error')
       setError(err.message)
     }
@@ -298,10 +285,7 @@ export default function FaceTrackedAvatar({
 
   const stopTracking = useCallback(() => {
     isTrackingRef.current = false
-    if (cameraRef.current) {
-      cameraRef.current.stop()
-      cameraRef.current = null
-    }
+    cameraRef.current?.stop()
     if (videoRef.current?.srcObject) {
       (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop())
     }
@@ -314,58 +298,55 @@ export default function FaceTrackedAvatar({
         <video ref={videoRef} className="hidden" autoPlay playsInline muted />
         <canvas ref={canvasRef} width={width} height={height} />
 
-        {/* Status badge */}
         <div className="absolute top-3 left-3">
-          <div className={`px-3 py-1 rounded text-sm font-bold ${
-            trackingStatus === 'tracking' ? 'bg-green-500' :
+          <div className={`px-4 py-2 rounded font-bold text-lg ${
+            trackingStatus === 'tracking' ? 'bg-green-500 animate-pulse' :
             trackingStatus === 'no-face' ? 'bg-yellow-500' :
             trackingStatus === 'error' ? 'bg-red-500' :
             trackingStatus === 'initializing' ? 'bg-blue-500' :
-            'bg-gray-500'
+            'bg-gray-600'
           } text-white`}>
-            {trackingStatus === 'tracking' && '● TRACKING'}
-            {trackingStatus === 'no-face' && '⚠ NO FACE'}
-            {trackingStatus === 'initializing' && '⏳ LOADING...'}
-            {trackingStatus === 'error' && '✕ ERROR'}
-            {trackingStatus === 'idle' && '○ READY'}
+            {trackingStatus === 'tracking' && '🟢 LIVE'}
+            {trackingStatus === 'no-face' && '⚠️ NO FACE'}
+            {trackingStatus === 'initializing' && '⏳ LOADING'}
+            {trackingStatus === 'error' && '❌ ERROR'}
+            {trackingStatus === 'idle' && '⚫ READY'}
           </div>
         </div>
       </div>
 
-      {/* Controls */}
       <div className="flex gap-3">
         {trackingStatus === 'idle' || trackingStatus === 'error' ? (
           <button
             onClick={initFaceTracking}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700"
+            className="px-8 py-4 bg-green-600 text-white rounded-lg font-bold text-xl hover:bg-green-700"
           >
-            🎥 Start Face Tracking
+            🎥 START
           </button>
         ) : (
           <button
             onClick={stopTracking}
-            className="px-6 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700"
+            className="px-8 py-4 bg-red-600 text-white rounded-lg font-bold text-xl hover:bg-red-700"
           >
-            ⏹ Stop Tracking
+            ⏹ STOP
           </button>
         )}
       </div>
 
-      {/* Debug panel */}
       {trackingStatus === 'tracking' && (
-        <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm">
-          <div className="grid grid-cols-2 gap-2 text-green-400">
-            <div>↔ Head Turn: {displayState.headRotationY.toFixed(1)}°</div>
-            <div>↕ Head Tilt: {displayState.headRotationX.toFixed(1)}°</div>
-            <div>👁 Left Eye: {(displayState.leftEyeOpen * 100).toFixed(0)}%</div>
-            <div>👁 Right Eye: {(displayState.rightEyeOpen * 100).toFixed(0)}%</div>
-            <div className="col-span-2">👄 Mouth: {(displayState.mouthOpen * 100).toFixed(0)}%</div>
+        <div className="bg-black rounded-lg p-4 font-mono text-xl border-2 border-green-500">
+          <div className="grid grid-cols-2 gap-3 text-green-400">
+            <div>↔️ <span className="text-white">{displayState.headRotationY.toFixed(0)}°</span></div>
+            <div>↕️ <span className="text-white">{displayState.headRotationX.toFixed(0)}°</span></div>
+            <div>👁️ <span className="text-white">{(displayState.leftEyeOpen * 100).toFixed(0)}%</span></div>
+            <div>👁️ <span className="text-white">{(displayState.rightEyeOpen * 100).toFixed(0)}%</span></div>
+            <div className="col-span-2">👄 <span className="text-white">{(displayState.mouthOpen * 100).toFixed(0)}%</span></div>
           </div>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-900 border border-red-500 rounded-lg p-4 text-red-100">
+        <div className="bg-red-900 border-2 border-red-500 rounded-lg p-4 text-red-100">
           <strong>Error:</strong> {error}
         </div>
       )}
