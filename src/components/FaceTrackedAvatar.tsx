@@ -110,6 +110,14 @@ export default function FaceTrackedAvatar({
       setError(null)
       console.log('📹 Starting face tracking...')
 
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Camera not supported in this browser. Try Chrome or Edge.')
+      }
+
+      if (window.isSecureContext === false) {
+        throw new Error('Camera requires HTTPS (or localhost). Open the site over https://')
+      }
+
       // Dynamically import MediaPipe from CDN
       if (!(window as any).FaceMesh) {
         console.log('📥 Loading FaceMesh from CDN...')
