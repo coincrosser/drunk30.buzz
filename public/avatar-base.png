@@ -1,0 +1,28 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="faceGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fdbcb4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f4a583;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="800" height="600" fill="#1a1a2e"/>
+  <!-- Head -->
+  <ellipse cx="400" cy="250" rx="120" ry="140" fill="url(#faceGrad)" stroke="#d4a574" stroke-width="3"/>
+  <!-- Eyes -->
+  <circle cx="350" cy="220" r="18" fill="white" stroke="#333" stroke-width="2"/>
+  <circle cx="450" cy="220" r="18" fill="white" stroke="#333" stroke-width="2"/>
+  <!-- Pupils -->
+  <circle cx="352" cy="222" r="10" fill="#333"/>
+  <circle cx="452" cy="222" r="10" fill="#333"/>
+  <!-- Eyebrows -->
+  <path d="M 320 190 Q 350 175 370 190" stroke="#8b6f47" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M 430 190 Q 460 175 480 190" stroke="#8b6f47" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Nose -->
+  <path d="M 400 220 L 390 280 L 410 280" stroke="#d4a574" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Mouth -->
+  <path d="M 360 330 Q 400 360 440 330" stroke="#d97a6e" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Ears -->
+  <ellipse cx="270" cy="280" rx="25" ry="50" fill="url(#faceGrad)" stroke="#d4a574" stroke-width="2"/>
+  <ellipse cx="530" cy="280" rx="25" ry="50" fill="url(#faceGrad)" stroke="#d4a574" stroke-width="2"/>
+</svg>

@@ -233,13 +233,23 @@ export default function FaceTrackedAvatar({
     img.src = baseImage
     img.onload = () => {
       baseImgRef.current = img
+      console.log('✅ Avatar base image loaded:', baseImage)
+    }
+    img.onerror = () => {
+      console.warn('⚠️ Failed to load avatar image:', baseImage)
+      // Still initialize face tracking with fallback placeholder
     }
   }, [baseImage])
 
-  // Auto-start face tracking on mount
+  // Auto-start face tracking on mount (or when image loads)
   useEffect(() => {
-    initFaceTracking()
-    return () => stopTracking()
+    const timer = setTimeout(() => {
+      initFaceTracking()
+    }, 500) // Small delay to allow image to load
+    return () => {
+      clearTimeout(timer)
+      stopTracking()
+    }
   }, [])
 
   // Draw avatar
@@ -314,7 +324,13 @@ export default function FaceTrackedAvatar({
   return (
     <div className="space-y-4">
       <div className="relative bg-black rounded-lg border border-gray-600 overflow-hidden" style={{ width, height }}>
-        <video ref={videoRef} className="hidden" autoPlay playsInline muted />
+        <video 
+          ref={videoRef} 
+          className="absolute inset-0 w-full h-full object-cover opacity-0 pointer-events-none" 
+          autoPlay 
+          playsInline 
+          muted 
+        />
         
         <canvas
           ref={canvasRef}
