@@ -10,7 +10,15 @@ interface AvatarState {
   mouthOpen: number
 }
 
-export default function FaceTrackedAvatar({ baseImage, width = 400, height = 400 }: { baseImage: string; width?: number; height?: number }) {
+export default function FaceTrackedAvatar({
+  baseImage,
+  width = 800,
+  height = 600,
+}: {
+  baseImage: string
+  width?: number
+  height?: number
+}) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [trackingStatus, setTrackingStatus] = useState<'idle' | 'initializing' | 'tracking' | 'no-face' | 'error'>('idle')
@@ -26,93 +34,135 @@ export default function FaceTrackedAvatar({ baseImage, width = 400, height = 400
   const [displayState, setDisplayState] = useState<AvatarState>(avatarStateRef.current)
   
   const faceMeshRef = useRef<any>(null)
-  const streamRef = useRef<MediaStream | null>(null)
+  const cameraRef = useRef<any>(null)
   const animationRef = useRef<number | null>(null)
   const baseImgRef = useRef<HTMLImageElement | null>(null)
   const faceDetectedTimeRef = useRef(0)
   const isTrackingRef = useRef(false)
 
-  const smoothValue = (current: number, target: number) => current + (target - current) * 0.6
+  const smoothingFactor = 0.6
 
-  const getEyeOpenRatio = (landmarks: any[], indices: number[]) => {
-    const top = landmarks[indices[1]], bottom = landmarks[indices[5]]
-    const left = landmarks[indices[0]], right = landmarks[indices[3]]
-    const v = Math.sqrt(Math.pow(top.x - bottom.x, 2) + Math.pow(top.y - bottom.y, 2))
-    const h = Math.sqrt(Math.pow(left.x - right.x, 2) + Math.pow(left.y - right.y, 2))
-    return Math.min(1, Math.max(0, (v / h) * 5))
+  const smoothValue = (current: number, target: number) => {
+    return current + (target - current) * smoothingFactor
+  }
+
+  const getEyeOpenRatio = (landmarks: any[], eyeIndices: number[]) => {
+    const top = landmarks[eyeIndices[1]]
+    const bottom = landmarks[eyeIndices[5]]
+    const left = landmarks[eyeIndices[0]]
+    const right = landmarks[eyeIndices[3]]
+
+    const verticalDist = Math.sqrt(
+      Math.pow(top.x - bottom.x, 2) + Math.pow(top.y - bottom.y, 2)
+    )
+    const horizontalDist = Math.sqrt(
+      Math.pow(left.x - right.x, 2) + Math.pow(left.y - right.y, 2)
+    )
+
+    const ratio = (verticalDist / horizontalDist) * 5
+    return Math.min(1, Math.max(0, ratio))
   }
 
   const getMouthOpenRatio = (landmarks: any[]) => {
-    const top = landmarks[13], bottom = landmarks[14]
-    const left = landmarks[61], right = landmarks[291]
-    const v = Math.sqrt(Math.pow(top.x - bottom.x, 2) + Math.pow(top.y - bottom.y, 2))
-    const h = Math.sqrt(Math.pow(left.x - right.x, 2) + Math.pow(left.y - right.y, 2))
-    return Math.min(1, Math.max(0, (v / h) * 4))
+    const innerLipTop = landmarks[13]
+    const innerLipBottom = landmarks[14]
+    const mouthLeftCorner = landmarks[61]
+    const mouthRightCorner = landmarks[291]
+
+    const verticalDist = Math.sqrt(
+      Math.pow(innerLipTop.x - innerLipBottom.x, 2) +
+      Math.pow(innerLipTop.y - innerLipBottom.y, 2)
+    )
+    const horizontalDist = Math.sqrt(
+      Math.pow(mouthLeftCorner.x - mouthRightCorner.x, 2) +
+      Math.pow(mouthLeftCorner.y - mouthRightCorner.y, 2)
+    )
+
+    const ratio = (verticalDist / horizontalDist) * 4
+    return Math.min(1, Math.max(0, ratio))
   }
 
   const getHeadRotation = (landmarks: any[]) => {
-    const nose = landmarks[1], forehead = landmarks[10]
-    const leftEye = landmarks[33], rightEye = landmarks[263]
-    const eyeCenter = { x: (leftEye.x + rightEye.x) / 2, y: (leftEye.y + rightEye.y) / 2 }
-    return {
-      rotationX: (forehead.y - nose.y) * 400,
-      rotationY: (nose.x - eyeCenter.x) * 500,
+    const nose = landmarks[1]
+    const forehead = landmarks[10]
+    const leftEye = landmarks[33]
+    const rightEye = landmarks[263]
+
+    const eyeCenter = {
+      x: (leftEye.x + rightEye.x) / 2,
+      y: (leftEye.y + rightEye.y) / 2,
     }
+
+    // MASSIVE multipliers - 4x previous values
+    const rotationY = (nose.x - eyeCenter.x) * 500
+    const rotationX = (forehead.y - nose.y) * 400
+
+    return { rotationX, rotationY }
   }
 
   const drawAvatar = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
     const state = avatarStateRef.current
-    const w = canvas.width, h = canvas.height
 
-    ctx.clearRect(0, 0, w, h)
+    ctx.clearRect(0, 0, width, height)
 
     if (baseImgRef.current) {
       ctx.save()
-      const rotateAngle = (state.headRotationY * Math.PI) / 180
-      const hShift = state.headRotationY * 3
-      const vShift = state.headRotationX * 2
+
+      // SUPER DRAMATIC movement
+      const rotateAngle = (state.headRotationY * Math.PI) / 180  // Full degree conversion
+      const horizontalShift = state.headRotationY * 3
+      const verticalShift = state.headRotationX * 2
       const scale = 1 + (Math.abs(state.headRotationY) / 30) * 0.15
 
-      ctx.translate(w / 2, h / 2)
+      ctx.translate(width / 2, height / 2)
       ctx.rotate(rotateAngle)
       ctx.scale(scale, scale)
-      ctx.translate(-w / 2 + hShift, -h / 2 + vShift)
-      ctx.drawImage(baseImgRef.current, 0, 0, w, h)
+      ctx.translate(-width / 2 + horizontalShift, -height / 2 + verticalShift)
+
+      ctx.drawImage(baseImgRef.current, 0, 0, width, height)
       ctx.restore()
 
-      const avgEye = (state.leftEyeOpen + state.rightEyeOpen) / 2
-      if (avgEye < 0.85) {
-        ctx.fillStyle = `rgba(0,0,0,${Math.min(1, (1 - avgEye) * 2.5)})`
-        ctx.fillRect(w * 0.20, h * 0.26, w * 0.25, h * 0.14)
-        ctx.fillRect(w * 0.50, h * 0.26, w * 0.25, h * 0.14)
+      // EYE BLINK
+      const avgEyeOpen = (state.leftEyeOpen + state.rightEyeOpen) / 2
+      if (avgEyeOpen < 0.85) {
+        const blinkOpacity = Math.min(1, (1 - avgEyeOpen) * 2.5)
+        ctx.fillStyle = `rgba(0, 0, 0, ${blinkOpacity})`
+        ctx.fillRect(width * 0.20, height * 0.26, width * 0.25, height * 0.14)
+        ctx.fillRect(width * 0.50, height * 0.26, width * 0.25, height * 0.14)
       }
 
+      // MOUTH
       if (state.mouthOpen > 0.08) {
-        ctx.fillStyle = `rgba(40,5,5,${Math.min(0.95, state.mouthOpen * 2)})`
+        const mouthOpacity = Math.min(0.95, state.mouthOpen * 2)
+        ctx.fillStyle = `rgba(40, 5, 5, ${mouthOpacity})`
+        const mouthHeight = height * 0.02 + (state.mouthOpen * height * 0.1)
         ctx.beginPath()
-        ctx.ellipse(w * 0.5, h * 0.73, w * 0.14, h * 0.02 + state.mouthOpen * h * 0.1, 0, 0, Math.PI * 2)
+        ctx.ellipse(width * 0.5, height * 0.73, width * 0.14, mouthHeight, 0, 0, Math.PI * 2)
         ctx.fill()
       }
 
+      // Green border when tracking
       if (isTrackingRef.current) {
         ctx.strokeStyle = '#00ff00'
-        ctx.lineWidth = 4
-        ctx.strokeRect(2, 2, w - 4, h - 4)
+        ctx.lineWidth = 6
+        ctx.strokeRect(3, 3, width - 6, height - 6)
       }
+
     } else {
       ctx.fillStyle = '#1a1a2e'
-      ctx.fillRect(0, 0, w, h)
+      ctx.fillRect(0, 0, width, height)
       ctx.fillStyle = '#888'
-      ctx.font = '20px sans-serif'
+      ctx.font = '28px sans-serif'
       ctx.textAlign = 'center'
-      ctx.fillText('Loading...', w / 2, h / 2)
+      ctx.fillText('Loading avatar...', width / 2, height / 2)
     }
-  }, [])
+  }, [width, height])
 
   useEffect(() => {
     let running = true
@@ -122,13 +172,20 @@ export default function FaceTrackedAvatar({ baseImage, width = 400, height = 400
       animationRef.current = requestAnimationFrame(animate)
     }
     animate()
-    return () => { running = false; if (animationRef.current) cancelAnimationFrame(animationRef.current) }
+    return () => {
+      running = false
+      if (animationRef.current) cancelAnimationFrame(animationRef.current)
+    }
   }, [drawAvatar])
 
   useEffect(() => {
     const img = new Image()
     img.crossOrigin = 'anonymous'
-    img.onload = () => { baseImgRef.current = img }
+    img.onload = () => {
+      baseImgRef.current = img
+      console.log('Avatar loaded!')
+    }
+    img.onerror = () => console.error('Avatar load failed')
     img.src = baseImage
   }, [baseImage])
 
@@ -137,132 +194,162 @@ export default function FaceTrackedAvatar({ baseImage, width = 400, height = 400
       setTrackingStatus('initializing')
       setError(null)
 
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-        audio: false,
-      })
-      streamRef.current = stream
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-
       if (!(window as any).FaceMesh) {
-        await new Promise((res, rej) => {
-          const s = document.createElement('script')
-          s.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js'
-          s.onload = res; s.onerror = rej
-          document.head.appendChild(s)
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+          script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js'
+          script.onload = resolve
+          script.onerror = reject
+          document.head.appendChild(script)
         })
       }
 
-      const faceMesh = new (window as any).FaceMesh({
-        locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`,
+      if (!(window as any).Camera) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+          script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js'
+          script.onload = resolve
+          script.onerror = reject
+          document.head.appendChild(script)
+        })
+      }
+
+      const FaceMesh = (window as any).FaceMesh
+      const Camera = (window as any).Camera
+
+      const faceMesh = new FaceMesh({
+        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
       })
 
-      faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 })
+      faceMesh.setOptions({
+        maxNumFaces: 1,
+        refineLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5,
+      })
 
       faceMesh.onResults((results: any) => {
         if (results.multiFaceLandmarks?.[0]) {
-          const lm = results.multiFaceLandmarks[0]
+          const landmarks = results.multiFaceLandmarks[0]
           faceDetectedTimeRef.current = Date.now()
+
+          const leftEyeIndices = [33, 160, 158, 133, 153, 144]
+          const rightEyeIndices = [263, 387, 385, 362, 380, 373]
+
+          const leftEyeOpen = getEyeOpenRatio(landmarks, leftEyeIndices)
+          const rightEyeOpen = getEyeOpenRatio(landmarks, rightEyeIndices)
+          const mouthOpen = getMouthOpenRatio(landmarks)
+          const { rotationX, rotationY } = getHeadRotation(landmarks)
 
           const prev = avatarStateRef.current
           avatarStateRef.current = {
-            headRotationX: smoothValue(prev.headRotationX, getHeadRotation(lm).rotationX),
-            headRotationY: smoothValue(prev.headRotationY, getHeadRotation(lm).rotationY),
-            leftEyeOpen: smoothValue(prev.leftEyeOpen, getEyeOpenRatio(lm, [33, 160, 158, 133, 153, 144])),
-            rightEyeOpen: smoothValue(prev.rightEyeOpen, getEyeOpenRatio(lm, [263, 387, 385, 362, 380, 373])),
-            mouthOpen: smoothValue(prev.mouthOpen, getMouthOpenRatio(lm)),
+            headRotationX: smoothValue(prev.headRotationX, rotationX),
+            headRotationY: smoothValue(prev.headRotationY, rotationY),
+            leftEyeOpen: smoothValue(prev.leftEyeOpen, leftEyeOpen),
+            rightEyeOpen: smoothValue(prev.rightEyeOpen, rightEyeOpen),
+            mouthOpen: smoothValue(prev.mouthOpen, mouthOpen),
           }
+
           setDisplayState({ ...avatarStateRef.current })
-          if (!isTrackingRef.current) { isTrackingRef.current = true; setTrackingStatus('tracking') }
+          
+          if (!isTrackingRef.current) {
+            isTrackingRef.current = true
+            setTrackingStatus('tracking')
+          }
         } else if (Date.now() - faceDetectedTimeRef.current > 2000) {
           setTrackingStatus('no-face')
         }
       })
 
       faceMeshRef.current = faceMesh
-      isTrackingRef.current = true
-      setTrackingStatus('tracking')
 
-      const sendFrame = async () => {
-        if (videoRef.current && faceMeshRef.current && isTrackingRef.current) {
-          await faceMeshRef.current.send({ image: videoRef.current })
-        }
-        if (isTrackingRef.current) requestAnimationFrame(sendFrame)
+      if (videoRef.current) {
+        const camera = new Camera(videoRef.current, {
+          onFrame: async () => {
+            if (videoRef.current && faceMeshRef.current) {
+              await faceMeshRef.current.send({ image: videoRef.current })
+            }
+          },
+          width: 640,
+          height: 480,
+        })
+        cameraRef.current = camera
+        await camera.start()
       }
-      sendFrame()
-
     } catch (err: any) {
+      console.error('Error:', err)
       setTrackingStatus('error')
-      if (err.name === 'NotAllowedError') setError('Camera denied. Tap lock icon → Allow camera.')
-      else if (err.name === 'NotFoundError') setError('No camera found.')
-      else if (err.name === 'NotReadableError') setError('Camera busy. Close other apps.')
-      else setError(err.message)
+      setError(err.message)
     }
   }, [])
 
   const stopTracking = useCallback(() => {
     isTrackingRef.current = false
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    streamRef.current = null
-    if (videoRef.current) videoRef.current.srcObject = null
+    cameraRef.current?.stop()
+    if (videoRef.current?.srcObject) {
+      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop())
+    }
     setTrackingStatus('idle')
   }, [])
 
   return (
-    <div className="w-full max-w-lg mx-auto">
-      <video ref={videoRef} className="hidden" autoPlay playsInline muted />
-      
-      {/* Avatar */}
-      <div className="relative w-full aspect-square bg-black rounded-3xl overflow-hidden shadow-2xl">
-        <canvas ref={canvasRef} width={400} height={400} className="w-full h-full" />
+    <div className="space-y-4">
+      <div className="relative bg-black rounded-lg overflow-hidden" style={{ width, height }}>
+        <video ref={videoRef} className="hidden" autoPlay playsInline muted />
+        <canvas ref={canvasRef} width={width} height={height} />
+
         <div className="absolute top-3 left-3">
-          <span className={`px-4 py-2 rounded-full text-sm font-bold shadow-lg ${
+          <div className={`px-4 py-2 rounded font-bold text-lg ${
             trackingStatus === 'tracking' ? 'bg-green-500 animate-pulse' :
             trackingStatus === 'no-face' ? 'bg-yellow-500' :
             trackingStatus === 'error' ? 'bg-red-500' :
-            trackingStatus === 'initializing' ? 'bg-blue-500' : 'bg-gray-600'
+            trackingStatus === 'initializing' ? 'bg-blue-500' :
+            'bg-gray-600'
           } text-white`}>
-            {trackingStatus === 'tracking' ? '🟢 LIVE' :
-             trackingStatus === 'no-face' ? '⚠️ NO FACE' :
-             trackingStatus === 'initializing' ? '⏳ LOADING' :
-             trackingStatus === 'error' ? '❌ ERROR' : '⚫ READY'}
-          </span>
+            {trackingStatus === 'tracking' && '🟢 LIVE'}
+            {trackingStatus === 'no-face' && '⚠️ NO FACE'}
+            {trackingStatus === 'initializing' && '⏳ LOADING'}
+            {trackingStatus === 'error' && '❌ ERROR'}
+            {trackingStatus === 'idle' && '⚫ READY'}
+          </div>
         </div>
       </div>
 
-      {/* BIG START BUTTON */}
-      <div className="mt-6">
+      <div className="flex gap-3">
         {trackingStatus === 'idle' || trackingStatus === 'error' ? (
-          <button onClick={initFaceTracking} className="w-full py-6 bg-green-600 text-white rounded-2xl text-2xl font-bold active:scale-95 transition-transform shadow-xl">
-            🎥 START TRACKING
+          <button
+            onClick={initFaceTracking}
+            className="px-8 py-4 bg-green-600 text-white rounded-lg font-bold text-xl hover:bg-green-700"
+          >
+            🎥 START
           </button>
         ) : (
-          <button onClick={stopTracking} className="w-full py-6 bg-red-600 text-white rounded-2xl text-2xl font-bold active:scale-95 transition-transform shadow-xl">
+          <button
+            onClick={stopTracking}
+            className="px-8 py-4 bg-red-600 text-white rounded-lg font-bold text-xl hover:bg-red-700"
+          >
             ⏹ STOP
           </button>
         )}
       </div>
 
-      {/* Debug Info */}
       {trackingStatus === 'tracking' && (
-        <div className="mt-4 bg-gray-900 rounded-2xl p-4 border-2 border-green-500">
-          <div className="grid grid-cols-2 gap-2 text-xl font-mono">
-            <div>↔️ <span className="text-green-400">{displayState.headRotationY.toFixed(0)}°</span></div>
-            <div>↕️ <span className="text-green-400">{displayState.headRotationX.toFixed(0)}°</span></div>
-            <div>👁️ <span className="text-green-400">{(displayState.leftEyeOpen * 100).toFixed(0)}%</span></div>
-            <div>👁️ <span className="text-green-400">{(displayState.rightEyeOpen * 100).toFixed(0)}%</span></div>
-            <div className="col-span-2">👄 <span className="text-green-400">{(displayState.mouthOpen * 100).toFixed(0)}%</span></div>
+        <div className="bg-black rounded-lg p-4 font-mono text-xl border-2 border-green-500">
+          <div className="grid grid-cols-2 gap-3 text-green-400">
+            <div>↔️ <span className="text-white">{displayState.headRotationY.toFixed(0)}°</span></div>
+            <div>↕️ <span className="text-white">{displayState.headRotationX.toFixed(0)}°</span></div>
+            <div>👁️ <span className="text-white">{(displayState.leftEyeOpen * 100).toFixed(0)}%</span></div>
+            <div>👁️ <span className="text-white">{(displayState.rightEyeOpen * 100).toFixed(0)}%</span></div>
+            <div className="col-span-2">👄 <span className="text-white">{(displayState.mouthOpen * 100).toFixed(0)}%</span></div>
           </div>
         </div>
       )}
 
-      {error && <div className="mt-4 bg-red-900 rounded-2xl p-4 text-red-100 text-lg">{error}</div>}
+      {error && (
+        <div className="bg-red-900 border-2 border-red-500 rounded-lg p-4 text-red-100">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
     </div>
   )
 }
