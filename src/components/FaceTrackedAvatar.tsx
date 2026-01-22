@@ -10,7 +10,7 @@ interface AvatarState {
   mouthOpen: number
 }
 
-export default function FaceTrackedAvatar({ baseImage }: { baseImage: string }) {
+export default function FaceTrackedAvatar({ baseImage, width = 400, height = 400 }: { baseImage: string; width?: number; height?: number }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [trackingStatus, setTrackingStatus] = useState<'idle' | 'initializing' | 'tracking' | 'no-face' | 'error'>('idle')
