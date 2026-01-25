@@ -8,6 +8,7 @@ interface AvatarState {
   leftEyeOpen: number
   rightEyeOpen: number
   mouthOpen: number
+  faceY: number // Track vertical face position
 }
 
 export default function FaceTrackedAvatar({ 
@@ -25,7 +26,7 @@ export default function FaceTrackedAvatar({
   const [error, setError] = useState<string | null>(null)
   
   const avatarStateRef = useRef<AvatarState>({
-    headRotationX: 0, headRotationY: 0, leftEyeOpen: 1, rightEyeOpen: 1, mouthOpen: 0,
+    headRotationX: 0, headRotationY: 0, leftEyeOpen: 1, rightEyeOpen: 1, mouthOpen: 0, faceY: 0.5,
   })
   const [displayState, setDisplayState] = useState<AvatarState>(avatarStateRef.current)
   
@@ -36,31 +37,67 @@ export default function FaceTrackedAvatar({
   const faceDetectedTimeRef = useRef(0)
   const isTrackingRef = useRef(false)
 
-  // FIXED canvas dimensions - never change
-  const canvasWidth = width
-  const canvasHeight = height
+  const CANVAS_W = 400
+  const CANVAS_H = 400
 
-  const smoothValue = (current: number, target: number) => current + (target - current) * 0.6
+  const smoothValue = (current: number, target: number, factor = 0.5) => current + (target - current) * factor
 
+  // IMPROVED eye detection - more sensitive
   const getEyeOpenRatio = (landmarks: any[], indices: number[]) => {
     const top = landmarks[indices[1]], bottom = landmarks[indices[5]]
     const left = landmarks[indices[0]], right = landmarks[indices[3]]
     const v = Math.sqrt(Math.pow(top.x - bottom.x, 2) + Math.pow(top.y - bottom.y, 2))
     const h = Math.sqrt(Math.pow(left.x - right.x, 2) + Math.pow(left.y - right.y, 2))
-    return Math.min(1, Math.max(0, (v / h) * 5))
+    // Increased multiplier for better sensitivity
+    return Math.min(1, Math.max(0, (v / h) * 6))
   }
 
+  // IMPROVED mouth detection - works even when face is off-center
   const getMouthOpenRatio = (landmarks: any[]) => {
-    const top = landmarks[13], bottom = landmarks[14], left = landmarks[61], right = landmarks[291]
-    const v = Math.sqrt(Math.pow(top.x - bottom.x, 2) + Math.pow(top.y - bottom.y, 2))
-    const h = Math.sqrt(Math.pow(left.x - right.x, 2) + Math.pow(left.y - right.y, 2))
-    return Math.min(1, Math.max(0, (v / h) * 4))
+    // Use more landmarks for better accuracy
+    const upperLip = landmarks[13]
+    const lowerLip = landmarks[14]
+    const upperInner = landmarks[82]
+    const lowerInner = landmarks[87]
+    
+    // Calculate mouth opening using multiple points
+    const innerDist = Math.sqrt(
+      Math.pow(upperInner.x - lowerInner.x, 2) + 
+      Math.pow(upperInner.y - lowerInner.y, 2)
+    )
+    const outerDist = Math.sqrt(
+      Math.pow(upperLip.x - lowerLip.x, 2) + 
+      Math.pow(upperLip.y - lowerLip.y, 2)
+    )
+    
+    // Average both measurements
+    const avgDist = (innerDist + outerDist) / 2
+    
+    // Mouth width for normalization
+    const left = landmarks[61], right = landmarks[291]
+    const mouthWidth = Math.sqrt(
+      Math.pow(left.x - right.x, 2) + 
+      Math.pow(left.y - right.y, 2)
+    )
+    
+    // Higher multiplier for better sensitivity
+    const ratio = (avgDist / mouthWidth) * 8
+    return Math.min(1, Math.max(0, ratio))
   }
 
   const getHeadRotation = (landmarks: any[]) => {
-    const nose = landmarks[1], forehead = landmarks[10], leftEye = landmarks[33], rightEye = landmarks[263]
+    const nose = landmarks[1], forehead = landmarks[10]
+    const leftEye = landmarks[33], rightEye = landmarks[263]
     const eyeCenter = { x: (leftEye.x + rightEye.x) / 2, y: (leftEye.y + rightEye.y) / 2 }
-    return { rotationX: (forehead.y - nose.y) * 400, rotationY: (nose.x - eyeCenter.x) * 500 }
+    
+    // Get face vertical position (0 = top, 1 = bottom)
+    const faceY = nose.y
+    
+    return { 
+      rotationX: (forehead.y - nose.y) * 400, 
+      rotationY: (nose.x - eyeCenter.x) * 500,
+      faceY: faceY
+    }
   }
 
   const drawAvatar = useCallback(() => {
@@ -70,15 +107,21 @@ export default function FaceTrackedAvatar({
     if (!ctx) return
 
     const state = avatarStateRef.current
-    const w = canvasWidth, h = canvasHeight
+    const w = CANVAS_W, h = CANVAS_H
 
     ctx.clearRect(0, 0, w, h)
 
     if (baseImgRef.current) {
       ctx.save()
+      
       const rotateAngle = (state.headRotationY * Math.PI) / 180
       const hShift = state.headRotationY * 3
-      const vShift = state.headRotationX * 2
+      
+      // ADJUSTED: Use face Y position to shift avatar vertically
+      // Center point is 0.5, adjust based on where face actually is
+      const faceCenterOffset = (state.faceY - 0.5) * h * 0.5
+      const vShift = state.headRotationX * 2 + faceCenterOffset
+      
       const scale = 1 + (Math.abs(state.headRotationY) / 30) * 0.15
 
       ctx.translate(w / 2, h / 2)
@@ -88,6 +131,7 @@ export default function FaceTrackedAvatar({
       ctx.drawImage(baseImgRef.current, 0, 0, w, h)
       ctx.restore()
 
+      // Eye blink overlay
       const avgEye = (state.leftEyeOpen + state.rightEyeOpen) / 2
       if (avgEye < 0.85) {
         ctx.fillStyle = `rgba(0,0,0,${Math.min(1, (1 - avgEye) * 2.5)})`
@@ -95,10 +139,12 @@ export default function FaceTrackedAvatar({
         ctx.fillRect(w * 0.50, h * 0.26, w * 0.25, h * 0.14)
       }
 
-      if (state.mouthOpen > 0.08) {
-        ctx.fillStyle = `rgba(40,5,5,${Math.min(0.95, state.mouthOpen * 2)})`
+      // Mouth overlay - LOWER THRESHOLD for better sensitivity
+      if (state.mouthOpen > 0.05) {
+        ctx.fillStyle = `rgba(40,5,5,${Math.min(0.95, state.mouthOpen * 2.5)})`
         ctx.beginPath()
-        ctx.ellipse(w * 0.5, h * 0.73, w * 0.14, h * 0.02 + state.mouthOpen * h * 0.1, 0, 0, Math.PI * 2)
+        const mouthHeight = h * 0.02 + (state.mouthOpen * h * 0.12)
+        ctx.ellipse(w * 0.5, h * 0.73, w * 0.14, mouthHeight, 0, 0, Math.PI * 2)
         ctx.fill()
       }
 
@@ -115,7 +161,7 @@ export default function FaceTrackedAvatar({
       ctx.textAlign = 'center'
       ctx.fillText('Loading...', w / 2, h / 2)
     }
-  }, [canvasWidth, canvasHeight])
+  }, [])
 
   useEffect(() => {
     let running = true
@@ -159,19 +205,27 @@ export default function FaceTrackedAvatar({
       const faceMesh = new (window as any).FaceMesh({
         locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`,
       })
-      faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 })
+      faceMesh.setOptions({ 
+        maxNumFaces: 1, 
+        refineLandmarks: true, 
+        minDetectionConfidence: 0.3, // LOWERED for better detection when off-center
+        minTrackingConfidence: 0.3   // LOWERED for better tracking
+      })
 
       faceMesh.onResults((results: any) => {
         if (results.multiFaceLandmarks?.[0]) {
           const lm = results.multiFaceLandmarks[0]
           faceDetectedTimeRef.current = Date.now()
-          const prev = avatarStateRef.current, rot = getHeadRotation(lm)
+          const prev = avatarStateRef.current
+          const { rotationX, rotationY, faceY } = getHeadRotation(lm)
+          
           avatarStateRef.current = {
-            headRotationX: smoothValue(prev.headRotationX, rot.rotationX),
-            headRotationY: smoothValue(prev.headRotationY, rot.rotationY),
+            headRotationX: smoothValue(prev.headRotationX, rotationX),
+            headRotationY: smoothValue(prev.headRotationY, rotationY),
             leftEyeOpen: smoothValue(prev.leftEyeOpen, getEyeOpenRatio(lm, [33, 160, 158, 133, 153, 144])),
             rightEyeOpen: smoothValue(prev.rightEyeOpen, getEyeOpenRatio(lm, [263, 387, 385, 362, 380, 373])),
-            mouthOpen: smoothValue(prev.mouthOpen, getMouthOpenRatio(lm)),
+            mouthOpen: smoothValue(prev.mouthOpen, getMouthOpenRatio(lm), 0.6), // Faster mouth response
+            faceY: smoothValue(prev.faceY, faceY, 0.3),
           }
           setDisplayState({ ...avatarStateRef.current })
           if (!isTrackingRef.current) { isTrackingRef.current = true; setTrackingStatus('tracking') }
@@ -207,25 +261,15 @@ export default function FaceTrackedAvatar({
   }, [])
 
   return (
-    <div className="w-full">
+    <div className="w-full px-2">
       <video ref={videoRef} className="hidden" autoPlay playsInline muted />
       
-      {/* FIXED SIZE - Never changes */}
       <div 
         className="relative mx-auto bg-black rounded-2xl overflow-hidden shadow-xl"
-        style={{ 
-          width: canvasWidth, 
-          height: canvasHeight,
-          maxWidth: '100%',
-        }}
+        style={{ width: '90vw', height: '90vw', maxWidth: '400px', maxHeight: '400px' }}
       >
-        <canvas 
-          ref={canvasRef} 
-          width={canvasWidth} 
-          height={canvasHeight}
-          style={{ width: canvasWidth, height: canvasHeight, maxWidth: '100%', display: 'block' }}
-        />
-        <div className="absolute top-2 left-2">
+        <canvas ref={canvasRef} width={CANVAS_W} height={CANVAS_H} className="absolute inset-0 w-full h-full" />
+        <div className="absolute top-2 left-2 z-10">
           <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
             trackingStatus === 'tracking' ? 'bg-green-500 animate-pulse' :
             trackingStatus === 'no-face' ? 'bg-yellow-500' :
