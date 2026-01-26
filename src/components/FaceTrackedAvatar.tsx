@@ -8,7 +8,6 @@ interface AvatarState {
   leftEyeOpen: number
   rightEyeOpen: number
   mouthOpen: number
-  faceY: number
 }
 
 export default function FaceTrackedAvatar({ 
@@ -24,10 +23,9 @@ export default function FaceTrackedAvatar({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [trackingStatus, setTrackingStatus] = useState<'idle' | 'initializing' | 'tracking' | 'no-face' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
-  const [showCamPreview, setShowCamPreview] = useState(true)
   
   const avatarStateRef = useRef<AvatarState>({
-    headRotationX: 0, headRotationY: 0, leftEyeOpen: 1, rightEyeOpen: 1, mouthOpen: 0, faceY: 0.5
+    headRotationX: 0, headRotationY: 0, leftEyeOpen: 1, rightEyeOpen: 1, mouthOpen: 0
   })
   const [displayState, setDisplayState] = useState<AvatarState>(avatarStateRef.current)
   
@@ -40,6 +38,21 @@ export default function FaceTrackedAvatar({
 
   const CANVAS_W = 400
   const CANVAS_H = 400
+
+  // Character feature positions (percentage of image)
+  // Adjust these for different characters!
+  const CHARACTER = {
+    // Left eye (bearing) position
+    leftEye: { x: 0.28, y: 0.36, width: 0.14, height: 0.12 },
+    // Right eye (glass) position  
+    rightEye: { x: 0.52, y: 0.40, width: 0.12, height: 0.10 },
+    // Mouth position
+    mouth: { x: 0.43, y: 0.56, width: 0.08, height: 0.04 },
+    // Eyelid color (match the purple fur)
+    eyelidColor: '#9B4D96',
+    // Mouth interior color
+    mouthColor: '#2a0a2a',
+  }
 
   const smoothValue = (current: number, target: number, factor = 0.5) => current + (target - current) * factor
 
@@ -60,10 +73,8 @@ export default function FaceTrackedAvatar({
       const lowerInner = landmarks[14]
       const left = landmarks[61]
       const right = landmarks[291]
-      
       const v = Math.sqrt(Math.pow(upperInner.x - lowerInner.x, 2) + Math.pow(upperInner.y - lowerInner.y, 2))
       const h = Math.sqrt(Math.pow(left.x - right.x, 2) + Math.pow(left.y - right.y, 2))
-      
       if (h === 0) return 0
       return Math.min(1, Math.max(0, (v / h) * 5))
     } catch { return 0 }
@@ -72,15 +83,13 @@ export default function FaceTrackedAvatar({
   const getHeadRotation = (landmarks: any[]) => {
     try {
       const nose = landmarks[1], forehead = landmarks[10]
-      const leftEye = landmarks[33], rightEye = landmarks[263], chin = landmarks[152]
+      const leftEye = landmarks[33], rightEye = landmarks[263]
       const eyeCenter = { x: (leftEye.x + rightEye.x) / 2, y: (leftEye.y + rightEye.y) / 2 }
-      const faceY = (nose.y + chin.y) / 2
       return { 
         rotationX: (forehead.y - nose.y) * 350,
         rotationY: (nose.x - eyeCenter.x) * 450,
-        faceY
       }
-    } catch { return { rotationX: 0, rotationY: 0, faceY: 0.5 } }
+    } catch { return { rotationX: 0, rotationY: 0 } }
   }
 
   const drawAvatar = useCallback(() => {
@@ -97,47 +106,119 @@ export default function FaceTrackedAvatar({
     if (baseImgRef.current) {
       ctx.save()
       
-      // HEAD MOVEMENT
+      // HEAD MOVEMENT + WOBBLE
       const rotateAngle = (state.headRotationY * Math.PI) / 180
-      const hShift = state.headRotationY * 2.5
+      const hShift = state.headRotationY * 2
       const vShift = state.headRotationX * 1.5
-      const scale = 1 + (Math.abs(state.headRotationY) / 35) * 0.12
+      const wobble = Math.sin(Date.now() / 200) * (state.mouthOpen * 3) // Wobble when talking
+      const scale = 1 + (Math.abs(state.headRotationY) / 40) * 0.1
 
       ctx.translate(w / 2, h / 2)
-      ctx.rotate(rotateAngle)
+      ctx.rotate(rotateAngle + (wobble * Math.PI / 180))
       ctx.scale(scale, scale)
       ctx.translate(-w / 2 + hShift, -h / 2 + vShift)
+      
+      // Draw base image
       ctx.drawImage(baseImgRef.current, 0, 0, w, h)
       ctx.restore()
 
-      // ====== EYE BLINK - FULL SCREEN DARKEN ======
-      const avgEye = (state.leftEyeOpen + state.rightEyeOpen) / 2
-      if (avgEye < 0.7) {
-        const blinkAmount = (1 - avgEye) * 1.5
-        // Darken whole image when blinking
-        ctx.fillStyle = `rgba(0, 0, 0, ${Math.min(0.8, blinkAmount)})`
-        ctx.fillRect(0, 0, w, h)
-      }
-
-      // ====== MOUTH OPEN - COLOR TINT ======
-      if (state.mouthOpen > 0.08) {
-        // Red/warm tint when mouth opens - VERY visible
-        const mouthAmount = Math.min(1, state.mouthOpen * 2)
-        ctx.fillStyle = `rgba(255, 50, 50, ${mouthAmount * 0.4})`
-        ctx.fillRect(0, 0, w, h)
+      // ====== ANIMATED EYELIDS ======
+      const leftEyeClosed = 1 - state.leftEyeOpen
+      const rightEyeClosed = 1 - state.rightEyeOpen
+      
+      // Left eye eyelid (closes from top)
+      if (leftEyeClosed > 0.15) {
+        const eye = CHARACTER.leftEye
+        const lidHeight = eye.height * w * leftEyeClosed
         
-        // Also draw mouth indicator at bottom
-        ctx.fillStyle = `rgba(200, 0, 0, ${mouthAmount * 0.8})`
-        const mouthSize = 20 + (state.mouthOpen * 60)
+        ctx.fillStyle = CHARACTER.eyelidColor
         ctx.beginPath()
-        ctx.ellipse(w / 2, h * 0.85, mouthSize, mouthSize / 2, 0, 0, Math.PI * 2)
+        ctx.ellipse(
+          eye.x * w + (eye.width * w / 2),
+          eye.y * h,
+          eye.width * w / 2,
+          lidHeight,
+          0, 0, Math.PI
+        )
+        ctx.fill()
+        
+        // Add subtle shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)'
+        ctx.beginPath()
+        ctx.ellipse(
+          eye.x * w + (eye.width * w / 2),
+          eye.y * h + lidHeight * 0.8,
+          eye.width * w / 2,
+          3,
+          0, 0, Math.PI * 2
+        )
+        ctx.fill()
+      }
+      
+      // Right eye eyelid
+      if (rightEyeClosed > 0.15) {
+        const eye = CHARACTER.rightEye
+        const lidHeight = eye.height * w * rightEyeClosed
+        
+        ctx.fillStyle = CHARACTER.eyelidColor
+        ctx.beginPath()
+        ctx.ellipse(
+          eye.x * w + (eye.width * w / 2),
+          eye.y * h,
+          eye.width * w / 2,
+          lidHeight,
+          0, 0, Math.PI
+        )
+        ctx.fill()
+        
+        ctx.fillStyle = 'rgba(0,0,0,0.3)'
+        ctx.beginPath()
+        ctx.ellipse(
+          eye.x * w + (eye.width * w / 2),
+          eye.y * h + lidHeight * 0.8,
+          eye.width * w / 2,
+          3,
+          0, 0, Math.PI * 2
+        )
         ctx.fill()
       }
 
-      // Tracking border
+      // ====== ANIMATED MOUTH ======
+      if (state.mouthOpen > 0.05) {
+        const mouth = CHARACTER.mouth
+        const openAmount = state.mouthOpen
+        
+        // Mouth interior (dark)
+        ctx.fillStyle = CHARACTER.mouthColor
+        ctx.beginPath()
+        ctx.ellipse(
+          mouth.x * w + (mouth.width * w / 2),
+          mouth.y * h + (openAmount * h * 0.04),
+          mouth.width * w / 2 + (openAmount * w * 0.03),
+          mouth.height * h + (openAmount * h * 0.08),
+          0, 0, Math.PI * 2
+        )
+        ctx.fill()
+        
+        // Tongue hint when mouth wide open
+        if (openAmount > 0.4) {
+          ctx.fillStyle = '#cc6666'
+          ctx.beginPath()
+          ctx.ellipse(
+            mouth.x * w + (mouth.width * w / 2),
+            mouth.y * h + (openAmount * h * 0.06),
+            mouth.width * w / 3,
+            openAmount * h * 0.03,
+            0, 0, Math.PI * 2
+          )
+          ctx.fill()
+        }
+      }
+
+      // Tracking indicator
       if (isTrackingRef.current) {
         ctx.strokeStyle = '#00ff00'
-        ctx.lineWidth = 4
+        ctx.lineWidth = 3
         ctx.strokeRect(2, 2, w - 4, h - 4)
       }
     } else {
@@ -146,7 +227,7 @@ export default function FaceTrackedAvatar({
       ctx.fillStyle = '#888'
       ctx.font = '20px sans-serif'
       ctx.textAlign = 'center'
-      ctx.fillText('Loading...', w / 2, h / 2)
+      ctx.fillText('Loading PUCK...', w / 2, h / 2)
     }
   }, [])
 
@@ -198,7 +279,7 @@ export default function FaceTrackedAvatar({
         if (results.multiFaceLandmarks?.[0]) {
           const lm = results.multiFaceLandmarks[0]
           faceDetectedTimeRef.current = Date.now()
-          const { rotationX, rotationY, faceY } = getHeadRotation(lm)
+          const { rotationX, rotationY } = getHeadRotation(lm)
           const prev = avatarStateRef.current
           
           avatarStateRef.current = {
@@ -207,7 +288,6 @@ export default function FaceTrackedAvatar({
             leftEyeOpen: smoothValue(prev.leftEyeOpen, getEyeOpenRatio(lm, [33, 160, 158, 133, 153, 144]), 0.7),
             rightEyeOpen: smoothValue(prev.rightEyeOpen, getEyeOpenRatio(lm, [263, 387, 385, 362, 380, 373]), 0.7),
             mouthOpen: smoothValue(prev.mouthOpen, getMouthOpenRatio(lm), 0.7),
-            faceY: smoothValue(prev.faceY, faceY),
           }
           setDisplayState({ ...avatarStateRef.current })
           if (!isTrackingRef.current) { isTrackingRef.current = true; setTrackingStatus('tracking') }
@@ -246,14 +326,7 @@ export default function FaceTrackedAvatar({
 
   return (
     <div className="w-full px-2">
-      {/* Camera preview - shows your actual face */}
-      <video 
-        ref={videoRef} 
-        className={showCamPreview && trackingStatus === 'tracking' ? "w-24 h-24 rounded-xl object-cover absolute top-4 right-4 z-20 border-2 border-green-500" : "hidden"} 
-        autoPlay 
-        playsInline 
-        muted 
-      />
+      <video ref={videoRef} className="hidden" autoPlay playsInline muted />
       
       {/* Avatar */}
       <div 
@@ -262,7 +335,6 @@ export default function FaceTrackedAvatar({
       >
         <canvas ref={canvasRef} width={CANVAS_W} height={CANVAS_H} className="absolute inset-0 w-full h-full" />
         
-        {/* Status */}
         <div className="absolute top-2 left-2 z-10">
           <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
             trackingStatus === 'tracking' ? 'bg-green-500 animate-pulse' :
@@ -291,57 +363,16 @@ export default function FaceTrackedAvatar({
         )}
       </div>
 
-      {/* Expression meters - BIG and visible */}
+      {/* Debug */}
       {trackingStatus === 'tracking' && (
-        <div className="mt-4 space-y-3">
-          {/* Eye meter */}
-          <div className="bg-gray-900 rounded-xl p-3">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-white font-bold">👁️ EYES</span>
-              <span className="text-green-400 font-mono">{(displayState.leftEyeOpen * 100).toFixed(0)}%</span>
-            </div>
-            <div className="h-4 bg-gray-700 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-blue-500 transition-all duration-100"
-                style={{ width: `${displayState.leftEyeOpen * 100}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-400 mt-1">Blink to see screen darken</p>
-          </div>
-          
-          {/* Mouth meter */}
-          <div className="bg-gray-900 rounded-xl p-3">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-white font-bold">👄 MOUTH</span>
-              <span className="text-green-400 font-mono">{(displayState.mouthOpen * 100).toFixed(0)}%</span>
-            </div>
-            <div className="h-4 bg-gray-700 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-red-500 transition-all duration-100"
-                style={{ width: `${displayState.mouthOpen * 100}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-400 mt-1">Open mouth to see red tint</p>
-          </div>
-          
-          {/* Head rotation */}
-          <div className="bg-gray-900 rounded-xl p-3">
-            <div className="flex justify-between text-white font-bold">
-              <span>↔️ {displayState.headRotationY.toFixed(0)}°</span>
-              <span>↕️ {displayState.headRotationX.toFixed(0)}°</span>
-            </div>
+        <div className="mt-3 bg-gray-900 rounded-xl p-3 border border-green-500">
+          <div className="grid grid-cols-2 gap-2 text-base font-mono">
+            <div>👁️ Eyes: <span className="text-green-400">{((displayState.leftEyeOpen + displayState.rightEyeOpen) / 2 * 100).toFixed(0)}%</span></div>
+            <div>👄 Mouth: <span className="text-green-400">{(displayState.mouthOpen * 100).toFixed(0)}%</span></div>
+            <div>↔️ <span className="text-green-400">{displayState.headRotationY.toFixed(0)}°</span></div>
+            <div>↕️ <span className="text-green-400">{displayState.headRotationX.toFixed(0)}°</span></div>
           </div>
         </div>
-      )}
-
-      {/* Toggle camera preview */}
-      {trackingStatus === 'tracking' && (
-        <button 
-          onClick={() => setShowCamPreview(!showCamPreview)}
-          className="mt-3 w-full py-2 bg-gray-700 text-white rounded-xl text-sm"
-        >
-          {showCamPreview ? '👁️ Hide' : '👁️ Show'} Camera Preview
-        </button>
       )}
 
       {error && <div className="mt-3 bg-red-900 rounded-xl p-3 text-red-100">{error}</div>}
